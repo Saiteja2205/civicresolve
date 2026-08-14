@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
+from organizations.models import Department
 
 
 class UserManager(BaseUserManager):
@@ -50,7 +51,13 @@ class User(AbstractUser):
         choices=Role.choices,
         default=Role.USER,
     )
-
+    department = models.ForeignKey(
+    Department,
+    on_delete=models.SET_NULL,
+    null=True,
+    blank=True,
+    related_name="users",
+    )
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
 
