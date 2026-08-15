@@ -1,6 +1,12 @@
 from django.contrib import admin
 
-from .models import Complaint, ComplaintAssignment, ComplaintHistory
+from .models import (
+    Complaint,
+    ComplaintAssignment,
+    ComplaintHistory,
+    ComplaintSLA,
+    SLAPolicy,
+)
 
 
 @admin.register(Complaint)
@@ -84,4 +90,43 @@ class ComplaintHistoryAdmin(admin.ModelAdmin):
 
     readonly_fields = (
         "created_at",
+    )
+
+
+@admin.register(SLAPolicy)
+class SLAPolicyAdmin(admin.ModelAdmin):
+    list_display = (
+        "priority",
+        "response_time_hours",
+        "resolution_time_hours",
+        "is_active",
+    )
+
+    list_filter = (
+        "priority",
+        "is_active",
+    )
+@admin.register(ComplaintSLA)
+class ComplaintSLAAdmin(admin.ModelAdmin):
+    list_display = (
+        "complaint",
+        "policy",
+        "response_deadline",
+        "resolution_deadline",
+        "response_breached",
+        "resolution_breached",
+    )
+
+    list_filter = (
+        "response_breached",
+        "resolution_breached",
+    )
+
+    search_fields = (
+        "complaint__ticket_number",
+    )
+
+    readonly_fields = (
+        "created_at",
+        "updated_at",
     )

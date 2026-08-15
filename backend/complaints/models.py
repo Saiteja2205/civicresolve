@@ -196,3 +196,66 @@ class ComplaintHistory(models.Model):
             f"{self.complaint.ticket_number}: "
             f"{self.old_status or 'NEW'} → {self.new_status}"
         )
+class SLAPolicy(models.Model):
+    priority = models.CharField(
+        max_length=20,
+        choices=Complaint.Priority.choices,
+        unique=True,
+    )
+
+    response_time_hours = models.PositiveIntegerField()
+
+    resolution_time_hours = models.PositiveIntegerField()
+
+    is_active = models.BooleanField(default=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["response_time_hours"]
+
+    def __str__(self):
+        return (
+            f"{self.priority} - "
+            f"{self.response_time_hours}h response / "
+            f"{self.resolution_time_hours}h resolution"
+        )
+class ComplaintSLA(models.Model):
+    complaint = models.OneToOneField(
+        Complaint,
+        on_delete=models.CASCADE,
+        related_name="sla",
+    )
+
+    policy = models.ForeignKey(
+        SLAPolicy,
+        on_delete=models.PROTECT,
+        related_name="complaint_slas",
+    )
+
+    response_deadline = models.DateTimeField()
+
+    resolution_deadline = models.DateTimeField()
+
+    response_completed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    resolution_completed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    response_breached = models.BooleanField(default=False)
+
+    resolution_breached = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"SLA - {self.complaint.ticket_number}"
