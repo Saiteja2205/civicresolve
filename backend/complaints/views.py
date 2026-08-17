@@ -12,3 +12,7 @@ class ComplaintViewSet(viewsets.ModelViewSet):
     ).all()
 
     serializer_class = ComplaintSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+

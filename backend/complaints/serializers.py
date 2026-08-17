@@ -21,6 +21,7 @@ class ComplaintSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Complaint
+
         fields = [
             "id",
             "ticket_number",
@@ -45,9 +46,11 @@ class ComplaintSerializer(serializers.ModelSerializer):
         read_only_fields = [
             "id",
             "ticket_number",
+            "user",
             "user_email",
             "category_name",
             "department_name",
+            "status",
             "created_at",
             "updated_at",
             "resolved_at",
