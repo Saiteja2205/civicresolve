@@ -51,6 +51,7 @@ class ComplaintSerializer(serializers.ModelSerializer):
             "category_name",
             "department_name",
             "status",
+            "priority",
             "created_at",
             "updated_at",
             "resolved_at",
