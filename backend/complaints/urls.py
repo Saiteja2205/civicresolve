@@ -1,6 +1,9 @@
 from rest_framework.routers import DefaultRouter
 
-from .views import ComplaintViewSet
+from .views import (
+    ComplaintAssignmentViewSet,
+    ComplaintViewSet,
+)
 
 
 router = DefaultRouter()
@@ -11,4 +14,10 @@ router.register(
     basename="complaint",
 )
 
-urlpatterns = router.urls   
+router.register(
+    r"assignments",
+    ComplaintAssignmentViewSet,
+    basename="assignment",
+)
+
+urlpatterns = router.urls

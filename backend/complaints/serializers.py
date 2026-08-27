@@ -1,7 +1,10 @@
 from rest_framework import serializers
 
 from .models import Complaint
+from accounts.models import User
+from organizations.models import Department
 
+from .models import ComplaintAssignment
 
 class ComplaintSerializer(serializers.ModelSerializer):
     user_email = serializers.EmailField(
@@ -56,4 +59,46 @@ class ComplaintSerializer(serializers.ModelSerializer):
             "updated_at",
             "resolved_at",
             "closed_at",
+        ]
+class ComplaintAssignmentSerializer(serializers.ModelSerializer):
+    officer_email = serializers.EmailField(
+        source="officer.email",
+        read_only=True,
+    )
+
+    department_name = serializers.CharField(
+        source="department.name",
+        read_only=True,
+    )
+
+    assigned_by_email = serializers.EmailField(
+        source="assigned_by.email",
+        read_only=True,
+    )
+
+    class Meta:
+        model = ComplaintAssignment
+
+        fields = [
+            "id",
+            "complaint",
+            "department",
+            "department_name",
+            "officer",
+            "officer_email",
+            "assigned_by",
+            "assigned_by_email",
+            "assigned_at",
+            "unassigned_at",
+            "reason",
+        ]
+
+        read_only_fields = [
+            "id",
+            "assigned_by",
+            "assigned_by_email",
+            "assigned_at",
+            "unassigned_at",
+            "department_name",
+            "officer_email",
         ]
