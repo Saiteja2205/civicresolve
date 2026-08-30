@@ -14,9 +14,10 @@ from accounts.permissions import (
 )
 from organizations.models import Department
 
-from .models import Complaint, ComplaintAssignment
+from .models import Complaint, ComplaintAssignment, ComplaintHistory
 from .serializers import (
     ComplaintAssignmentSerializer,
+    ComplaintHistorySerializer,
     ComplaintSerializer,
 )
 from .services.complaint_service import (
@@ -71,6 +72,11 @@ class ComplaintViewSet(viewsets.ModelViewSet):
         elif self.action == "close":
             permission_classes = [
                 IsAdminUserRole,
+            ]
+
+        elif self.action == "history":
+            permission_classes = [
+                permissions.IsAuthenticated,
             ]
 
         else:
@@ -134,7 +140,9 @@ class ComplaintViewSet(viewsets.ModelViewSet):
         if not officer_id:
             return Response(
                 {
-                    "officer": "This field is required."
+                    "officer": (
+                        "This field is required."
+                    )
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
@@ -142,7 +150,9 @@ class ComplaintViewSet(viewsets.ModelViewSet):
         if not department_id:
             return Response(
                 {
-                    "department": "This field is required."
+                    "department": (
+                        "This field is required."
+                    )
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
@@ -155,7 +165,9 @@ class ComplaintViewSet(viewsets.ModelViewSet):
         except User.DoesNotExist:
             return Response(
                 {
-                    "officer": "Officer not found."
+                    "officer": (
+                        "Officer not found."
+                    )
                 },
                 status=status.HTTP_404_NOT_FOUND,
             )
@@ -168,7 +180,9 @@ class ComplaintViewSet(viewsets.ModelViewSet):
         except Department.DoesNotExist:
             return Response(
                 {
-                    "department": "Department not found."
+                    "department": (
+                        "Department not found."
+                    )
                 },
                 status=status.HTTP_404_NOT_FOUND,
             )
@@ -177,7 +191,8 @@ class ComplaintViewSet(viewsets.ModelViewSet):
             return Response(
                 {
                     "officer": (
-                        "Selected user is not an officer."
+                        "Selected user is not "
+                        "an officer."
                     )
                 },
                 status=status.HTTP_400_BAD_REQUEST,
@@ -285,7 +300,9 @@ class ComplaintViewSet(viewsets.ModelViewSet):
             )
 
         return Response(
-            self.get_serializer(complaint).data
+            self.get_serializer(
+                complaint
+            ).data
         )
 
     @action(
@@ -315,7 +332,9 @@ class ComplaintViewSet(viewsets.ModelViewSet):
             )
 
         return Response(
-            self.get_serializer(complaint).data
+            self.get_serializer(
+                complaint
+            ).data
         )
 
     @action(
@@ -345,7 +364,9 @@ class ComplaintViewSet(viewsets.ModelViewSet):
             )
 
         return Response(
-            self.get_serializer(complaint).data
+            self.get_serializer(
+                complaint
+            ).data
         )
 
     @action(
@@ -375,7 +396,37 @@ class ComplaintViewSet(viewsets.ModelViewSet):
             )
 
         return Response(
-            self.get_serializer(complaint).data
+            self.get_serializer(
+                complaint
+            ).data
+        )
+
+    @action(
+        detail=True,
+        methods=["get"],
+        permission_classes=[
+            permissions.IsAuthenticated
+        ],
+    )
+    def history(self, request, pk=None):
+
+        complaint = self.get_object()
+
+        history = ComplaintHistory.objects.filter(
+            complaint=complaint
+        ).select_related(
+            "changed_by"
+        ).order_by(
+            "created_at"
+        )
+
+        serializer = ComplaintHistorySerializer(
+            history,
+            many=True,
+        )
+
+        return Response(
+            serializer.data
         )
 
 
@@ -383,14 +434,20 @@ class ComplaintAssignmentViewSet(
     viewsets.ModelViewSet
 ):
 
-    queryset = ComplaintAssignment.objects.select_related(
-        "complaint",
-        "department",
-        "officer",
-        "assigned_by",
-    ).all()
+    queryset = (
+        ComplaintAssignment.objects
+        .select_related(
+            "complaint",
+            "department",
+            "officer",
+            "assigned_by",
+        )
+        .all()
+    )
 
-    serializer_class = ComplaintAssignmentSerializer
+    serializer_class = (
+        ComplaintAssignmentSerializer
+    )
 
     def get_permissions(self):
 
