@@ -1,3 +1,4 @@
+from django.db import transaction
 from django.utils import timezone
 
 from rest_framework import permissions, serializers, status, viewsets
@@ -17,6 +18,9 @@ from .models import Complaint, ComplaintAssignment
 from .serializers import (
     ComplaintAssignmentSerializer,
     ComplaintSerializer,
+)
+from .services.complaint_service import (
+    change_complaint_status,
 )
 
 
@@ -102,32 +106,12 @@ class ComplaintViewSet(viewsets.ModelViewSet):
             user=self.request.user
         )
 
-    def change_status(self, complaint, new_status):
-
-        complaint.status = new_status
-
-        if new_status == "RESOLVED":
-            complaint.resolved_at = timezone.now()
-
-        if new_status == "CLOSED":
-            complaint.closed_at = timezone.now()
-
-        complaint.save()
-
-        serializer = self.get_serializer(
-            complaint
-        )
-
-        return Response(
-            serializer.data,
-            status=status.HTTP_200_OK,
-        )
-
     @action(
         detail=True,
         methods=["post"],
         permission_classes=[IsAdminUserRole],
     )
+    @transaction.atomic
     def assign(self, request, pk=None):
 
         complaint = self.get_object()
@@ -143,25 +127,14 @@ class ComplaintViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        officer_id = request.data.get(
-            "officer"
-        )
-
-        department_id = request.data.get(
-            "department"
-        )
-
-        reason = request.data.get(
-            "reason",
-            "",
-        )
+        officer_id = request.data.get("officer")
+        department_id = request.data.get("department")
+        reason = request.data.get("reason", "")
 
         if not officer_id:
             return Response(
                 {
-                    "officer": (
-                        "This field is required."
-                    )
+                    "officer": "This field is required."
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
@@ -169,9 +142,7 @@ class ComplaintViewSet(viewsets.ModelViewSet):
         if not department_id:
             return Response(
                 {
-                    "department": (
-                        "This field is required."
-                    )
+                    "department": "This field is required."
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
@@ -197,9 +168,7 @@ class ComplaintViewSet(viewsets.ModelViewSet):
         except Department.DoesNotExist:
             return Response(
                 {
-                    "department": (
-                        "Department not found."
-                    )
+                    "department": "Department not found."
                 },
                 status=status.HTTP_404_NOT_FOUND,
             )
@@ -208,8 +177,7 @@ class ComplaintViewSet(viewsets.ModelViewSet):
             return Response(
                 {
                     "officer": (
-                        "Selected user is not "
-                        "an officer."
+                        "Selected user is not an officer."
                     )
                 },
                 status=status.HTTP_400_BAD_REQUEST,
@@ -256,14 +224,22 @@ class ComplaintViewSet(viewsets.ModelViewSet):
             )
         )
 
-        complaint.status = "ASSIGNED"
+        try:
+            complaint = change_complaint_status(
+                complaint=complaint,
+                new_status="ASSIGNED",
+                changed_by=request.user,
+                comment=(
+                    reason
+                    or "Complaint assigned."
+                ),
+            )
 
-        complaint.save(
-            update_fields=[
-                "status",
-                "updated_at",
-            ]
-        )
+        except ValueError as error:
+            return Response(
+                {"detail": str(error)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         return Response(
             {
@@ -287,28 +263,29 @@ class ComplaintViewSet(viewsets.ModelViewSet):
         methods=["post"],
         permission_classes=[IsOfficerUserRole],
     )
-    def acknowledge(
-        self,
-        request,
-        pk=None,
-    ):
+    def acknowledge(self, request, pk=None):
 
         complaint = self.get_object()
 
-        if complaint.status != "ASSIGNED":
+        try:
+            complaint = change_complaint_status(
+                complaint=complaint,
+                new_status="ACKNOWLEDGED",
+                changed_by=request.user,
+                comment=request.data.get(
+                    "comment",
+                    "Complaint acknowledged by officer.",
+                ),
+            )
+
+        except ValueError as error:
             return Response(
-                {
-                    "detail": (
-                        "Only assigned complaints "
-                        "can be acknowledged."
-                    )
-                },
+                {"detail": str(error)},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        return self.change_status(
-            complaint,
-            "ACKNOWLEDGED",
+        return Response(
+            self.get_serializer(complaint).data
         )
 
     @action(
@@ -316,29 +293,29 @@ class ComplaintViewSet(viewsets.ModelViewSet):
         methods=["post"],
         permission_classes=[IsOfficerUserRole],
     )
-    def start(
-        self,
-        request,
-        pk=None,
-    ):
+    def start(self, request, pk=None):
 
         complaint = self.get_object()
 
-        if complaint.status != "ACKNOWLEDGED":
+        try:
+            complaint = change_complaint_status(
+                complaint=complaint,
+                new_status="IN_PROGRESS",
+                changed_by=request.user,
+                comment=request.data.get(
+                    "comment",
+                    "Work started by officer.",
+                ),
+            )
+
+        except ValueError as error:
             return Response(
-                {
-                    "detail": (
-                        "Complaint must be "
-                        "acknowledged before "
-                        "work can begin."
-                    )
-                },
+                {"detail": str(error)},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        return self.change_status(
-            complaint,
-            "IN_PROGRESS",
+        return Response(
+            self.get_serializer(complaint).data
         )
 
     @action(
@@ -346,28 +323,29 @@ class ComplaintViewSet(viewsets.ModelViewSet):
         methods=["post"],
         permission_classes=[IsOfficerUserRole],
     )
-    def resolve(
-        self,
-        request,
-        pk=None,
-    ):
+    def resolve(self, request, pk=None):
 
         complaint = self.get_object()
 
-        if complaint.status != "IN_PROGRESS":
+        try:
+            complaint = change_complaint_status(
+                complaint=complaint,
+                new_status="RESOLVED",
+                changed_by=request.user,
+                comment=request.data.get(
+                    "comment",
+                    "Complaint resolved by officer.",
+                ),
+            )
+
+        except ValueError as error:
             return Response(
-                {
-                    "detail": (
-                        "Only complaints in "
-                        "progress can be resolved."
-                    )
-                },
+                {"detail": str(error)},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        return self.change_status(
-            complaint,
-            "RESOLVED",
+        return Response(
+            self.get_serializer(complaint).data
         )
 
     @action(
@@ -375,28 +353,29 @@ class ComplaintViewSet(viewsets.ModelViewSet):
         methods=["post"],
         permission_classes=[IsAdminUserRole],
     )
-    def close(
-        self,
-        request,
-        pk=None,
-    ):
+    def close(self, request, pk=None):
 
         complaint = self.get_object()
 
-        if complaint.status != "RESOLVED":
+        try:
+            complaint = change_complaint_status(
+                complaint=complaint,
+                new_status="CLOSED",
+                changed_by=request.user,
+                comment=request.data.get(
+                    "comment",
+                    "Complaint closed by administrator.",
+                ),
+            )
+
+        except ValueError as error:
             return Response(
-                {
-                    "detail": (
-                        "Only resolved complaints "
-                        "can be closed."
-                    )
-                },
+                {"detail": str(error)},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        return self.change_status(
-            complaint,
-            "CLOSED",
+        return Response(
+            self.get_serializer(complaint).data
         )
 
 
