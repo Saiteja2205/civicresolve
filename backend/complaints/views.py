@@ -1,8 +1,9 @@
 from django.db import transaction
 from django.utils import timezone
 
-from rest_framework import permissions, serializers, status, viewsets
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from accounts.models import User
@@ -12,25 +13,22 @@ from accounts.permissions import (
     IsCitizenUser,
     IsOfficerUserRole,
 )
-from organizations.models import Department
-
-from .models import (
+from complaints.models import (
     Complaint,
     ComplaintAssignment,
     ComplaintHistory,
 )
-from .serializers import (
+from complaints.serializers import (
     ComplaintAssignmentSerializer,
     ComplaintHistorySerializer,
     ComplaintSerializer,
 )
-from .services.complaint_service import (
-    change_complaint_status,
-)
+from complaints.services.complaint_creation_service import create_complaint
+from complaints.services.complaint_service import change_complaint_status
+from organizations.models import Department
 
 
 class ComplaintViewSet(viewsets.ModelViewSet):
-
     queryset = Complaint.objects.select_related(
         "user",
         "category",
@@ -40,61 +38,33 @@ class ComplaintViewSet(viewsets.ModelViewSet):
     serializer_class = ComplaintSerializer
 
     def get_permissions(self):
-
         if self.action == "create":
-            permission_classes = [
-                IsCitizenUser,
-            ]
+            permission_classes = [IsAuthenticated, IsCitizenUser]
 
-        elif self.action in [
-            "update",
-            "partial_update",
-        ]:
-            permission_classes = [
-                IsAdminOrOfficer,
-            ]
+        elif self.action in ["update", "partial_update"]:
+            permission_classes = [IsAuthenticated, IsAdminOrOfficer]
 
         elif self.action == "destroy":
-            permission_classes = [
-                IsAdminUserRole,
-            ]
+            permission_classes = [IsAuthenticated, IsAdminUserRole]
 
         elif self.action == "assign":
-            permission_classes = [
-                IsAdminUserRole,
-            ]
+            permission_classes = [IsAuthenticated, IsAdminUserRole]
 
-        elif self.action in [
-            "acknowledge",
-            "start",
-            "resolve",
-        ]:
-            permission_classes = [
-                IsOfficerUserRole,
-            ]
+        elif self.action in ["acknowledge", "start", "resolve"]:
+            permission_classes = [IsAuthenticated, IsOfficerUserRole]
 
         elif self.action == "close":
-            permission_classes = [
-                IsAdminUserRole,
-            ]
+            permission_classes = [IsAuthenticated, IsAdminUserRole]
 
         elif self.action == "history":
-            permission_classes = [
-                permissions.IsAuthenticated,
-            ]
+            permission_classes = [IsAuthenticated]
 
         else:
-            permission_classes = [
-                permissions.IsAuthenticated,
-            ]
+            permission_classes = [IsAuthenticated]
 
-        return [
-            permission()
-            for permission in permission_classes
-        ]
+        return [permission() for permission in permission_classes]
 
     def get_queryset(self):
-
         user = self.request.user
 
         if user.role == "ADMIN":
@@ -106,327 +76,242 @@ class ComplaintViewSet(viewsets.ModelViewSet):
                 assignments__unassigned_at__isnull=True,
             ).distinct()
 
-        return self.queryset.filter(
-            user=user
-        )
+        return self.queryset.filter(user=user)
 
     def perform_create(self, serializer):
-
-        serializer.save(
-            user=self.request.user
+        create_complaint(
+            validated_data=serializer.validated_data,
+            created_by=self.request.user,
         )
 
-    @action(
-        detail=True,
-        methods=["post"],
-        permission_classes=[IsAdminUserRole],
-    )
+    @action(detail=True, methods=["post"])
     @transaction.atomic
     def assign(self, request, pk=None):
-
         complaint = self.get_object()
 
-        if complaint.status != "SUBMITTED":
-            return Response(
-                {
-                    "detail": (
-                        "Only submitted complaints "
-                        "can be assigned."
-                    )
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        officer_id = request.data.get("officer")
-        department_id = request.data.get("department")
-        reason = request.data.get("reason", "")
+        officer_id = request.data.get("officer_id")
+        department_id = request.data.get("department_id")
+        reason = request.data.get(
+            "reason",
+            "Complaint assigned to officer.",
+        )
 
         if not officer_id:
             return Response(
-                {
-                    "officer": (
-                        "This field is required."
-                    )
-                },
+                {"detail": "officer_id is required."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         if not department_id:
             return Response(
-                {
-                    "department": (
-                        "This field is required."
-                    )
-                },
+                {"detail": "department_id is required."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         try:
             officer = User.objects.get(
-                id=officer_id
+                id=officer_id,
+                role="OFFICER",
             )
-
         except User.DoesNotExist:
             return Response(
-                {
-                    "officer": (
-                        "Officer not found."
-                    )
-                },
-                status=status.HTTP_404_NOT_FOUND,
+                {"detail": "Valid officer not found."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         try:
-            department = Department.objects.get(
-                id=department_id
-            )
-
+            department = Department.objects.get(id=department_id)
         except Department.DoesNotExist:
             return Response(
-                {
-                    "department": (
-                        "Department not found."
-                    )
-                },
-                status=status.HTTP_404_NOT_FOUND,
-            )
-
-        if officer.role != "OFFICER":
-            return Response(
-                {
-                    "officer": (
-                        "Selected user is not "
-                        "an officer."
-                    )
-                },
+                {"detail": "Valid department not found."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         if officer.department_id != department.id:
             return Response(
                 {
-                    "officer": (
-                        "Officer does not belong "
-                        "to the selected department."
+                    "detail": (
+                        "Officer does not belong to the selected department."
                     )
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        active_assignment = (
-            ComplaintAssignment.objects
-            .filter(
-                complaint=complaint,
-                unassigned_at__isnull=True,
-            )
-            .first()
+        ComplaintAssignment.objects.filter(
+            complaint=complaint,
+            unassigned_at__isnull=True,
+        ).update(
+            unassigned_at=timezone.now()
         )
 
-        if active_assignment:
-            active_assignment.unassigned_at = (
-                timezone.now()
-            )
-
-            active_assignment.save(
-                update_fields=[
-                    "unassigned_at"
-                ]
-            )
-
-        assignment = (
-            ComplaintAssignment.objects.create(
-                complaint=complaint,
-                department=department,
-                officer=officer,
-                assigned_by=request.user,
-                reason=reason,
-            )
+        ComplaintAssignment.objects.create(
+            complaint=complaint,
+            department=department,
+            officer=officer,
+            assigned_by=request.user,
+            reason=reason,
         )
 
         try:
-            complaint = change_complaint_status(
+            change_complaint_status(
                 complaint=complaint,
-                new_status="ASSIGNED",
+                new_status=Complaint.Status.ASSIGNED,
                 changed_by=request.user,
-                comment=(
-                    reason
-                    or "Complaint assigned."
-                ),
+                comment=reason,
             )
-
-        except ValueError as error:
+        except ValueError as exc:
             return Response(
-                {"detail": str(error)},
+                {"detail": str(exc)},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         return Response(
             {
-                "message": (
-                    "Complaint assigned "
-                    "successfully."
-                ),
-                "complaint": (
-                    complaint.ticket_number
-                ),
-                "assignment_id": assignment.id,
-                "officer": officer.email,
-                "department": department.name,
+                "detail": "Complaint assigned successfully.",
+                "complaint_id": complaint.id,
+                "officer_id": officer.id,
+                "department_id": department.id,
                 "status": complaint.status,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=True, methods=["post"])
+    def acknowledge(self, request, pk=None):
+        complaint = self.get_object()
+
+        comment = request.data.get(
+            "comment",
+            "Complaint acknowledged by officer.",
+        )
+
+        try:
+            change_complaint_status(
+                complaint=complaint,
+                new_status=Complaint.Status.ACKNOWLEDGED,
+                changed_by=request.user,
+                comment=comment,
+            )
+        except ValueError as exc:
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response(
+            {
+                "detail": "Complaint acknowledged successfully.",
+                "status": complaint.status,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=True, methods=["post"])
+    def start(self, request, pk=None):
+        complaint = self.get_object()
+
+        comment = request.data.get(
+            "comment",
+            "Complaint work started.",
+        )
+
+        try:
+            change_complaint_status(
+                complaint=complaint,
+                new_status=Complaint.Status.IN_PROGRESS,
+                changed_by=request.user,
+                comment=comment,
+            )
+        except ValueError as exc:
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response(
+            {
+                "detail": "Complaint marked as in progress.",
+                "status": complaint.status,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=True, methods=["post"])
+    def resolve(self, request, pk=None):
+        complaint = self.get_object()
+
+        comment = request.data.get(
+            "comment",
+            "Complaint resolved by officer.",
+        )
+
+        try:
+            change_complaint_status(
+                complaint=complaint,
+                new_status=Complaint.Status.RESOLVED,
+                changed_by=request.user,
+                comment=comment,
+            )
+        except ValueError as exc:
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response(
+            {
+                "detail": "Complaint resolved successfully.",
+                "status": complaint.status,
+                "resolved_at": complaint.resolved_at,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=True, methods=["post"])
+    def close(self, request, pk=None):
+        complaint = self.get_object()
+
+        comment = request.data.get(
+            "comment",
+            "Complaint closed by administrator.",
+        )
+
+        try:
+            change_complaint_status(
+                complaint=complaint,
+                new_status=Complaint.Status.CLOSED,
+                changed_by=request.user,
+                comment=comment,
+            )
+        except ValueError as exc:
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response(
+            {
+                "detail": "Complaint closed successfully.",
+                "status": complaint.status,
+                "closed_at": complaint.closed_at,
             },
             status=status.HTTP_200_OK,
         )
 
     @action(
         detail=True,
-        methods=["post"],
-        permission_classes=[IsOfficerUserRole],
-    )
-    def acknowledge(self, request, pk=None):
-
-        complaint = self.get_object()
-
-        try:
-            complaint = change_complaint_status(
-                complaint=complaint,
-                new_status="ACKNOWLEDGED",
-                changed_by=request.user,
-                comment=request.data.get(
-                    "comment",
-                    "Complaint acknowledged by officer.",
-                ),
-            )
-
-        except ValueError as error:
-            return Response(
-                {"detail": str(error)},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        return Response(
-            self.get_serializer(
-                complaint
-            ).data
-        )
-
-    @action(
-        detail=True,
-        methods=["post"],
-        permission_classes=[IsOfficerUserRole],
-    )
-    def start(self, request, pk=None):
-
-        complaint = self.get_object()
-
-        try:
-            complaint = change_complaint_status(
-                complaint=complaint,
-                new_status="IN_PROGRESS",
-                changed_by=request.user,
-                comment=request.data.get(
-                    "comment",
-                    "Work started by officer.",
-                ),
-            )
-
-        except ValueError as error:
-            return Response(
-                {"detail": str(error)},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        return Response(
-            self.get_serializer(
-                complaint
-            ).data
-        )
-
-    @action(
-        detail=True,
-        methods=["post"],
-        permission_classes=[IsOfficerUserRole],
-    )
-    def resolve(self, request, pk=None):
-
-        complaint = self.get_object()
-
-        try:
-            complaint = change_complaint_status(
-                complaint=complaint,
-                new_status="RESOLVED",
-                changed_by=request.user,
-                comment=request.data.get(
-                    "comment",
-                    "Complaint resolved by officer.",
-                ),
-            )
-
-        except ValueError as error:
-            return Response(
-                {"detail": str(error)},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        return Response(
-            self.get_serializer(
-                complaint
-            ).data
-        )
-
-    @action(
-        detail=True,
-        methods=["post"],
-        permission_classes=[IsAdminUserRole],
-    )
-    def close(self, request, pk=None):
-
-        complaint = self.get_object()
-
-        try:
-            complaint = change_complaint_status(
-                complaint=complaint,
-                new_status="CLOSED",
-                changed_by=request.user,
-                comment=request.data.get(
-                    "comment",
-                    "Complaint closed by administrator.",
-                ),
-            )
-
-        except ValueError as error:
-            return Response(
-                {"detail": str(error)},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        return Response(
-            self.get_serializer(
-                complaint
-            ).data
-        )
-
-    @action(
-        detail=True,
         methods=["get"],
-        permission_classes=[
-            permissions.IsAuthenticated
-        ],
+        permission_classes=[IsAuthenticated],
     )
     def history(self, request, pk=None):
-
         complaint = self.get_object()
 
-        history = (
-            ComplaintHistory.objects
-            .filter(
-                complaint=complaint
-            )
-            .select_related(
-                "changed_by"
-            )
-            .order_by(
-                "created_at"
-            )
+        history = ComplaintHistory.objects.filter(
+            complaint=complaint
+        ).select_related(
+            "changed_by"
+        ).order_by(
+            "created_at"
         )
 
         serializer = ComplaintHistorySerializer(
@@ -435,94 +320,65 @@ class ComplaintViewSet(viewsets.ModelViewSet):
         )
 
         return Response(
-            serializer.data
+            serializer.data,
+            status=status.HTTP_200_OK,
         )
 
 
-class ComplaintAssignmentViewSet(
-    viewsets.ModelViewSet
-):
+class ComplaintAssignmentViewSet(viewsets.ModelViewSet):
+    queryset = ComplaintAssignment.objects.select_related(
+        "complaint",
+        "department",
+        "officer",
+        "assigned_by",
+    ).all()
 
-    queryset = (
-        ComplaintAssignment.objects
-        .select_related(
-            "complaint",
-            "department",
-            "officer",
-            "assigned_by",
-        )
-        .all()
-    )
-
-    serializer_class = (
-        ComplaintAssignmentSerializer
-    )
+    serializer_class = ComplaintAssignmentSerializer
 
     def get_permissions(self):
-
-        if self.action in [
-            "create",
-            "update",
-            "partial_update",
-            "destroy",
-        ]:
+        if self.action in ["create", "update", "partial_update", "destroy"]:
             permission_classes = [
+                IsAuthenticated,
                 IsAdminUserRole,
             ]
-
         else:
             permission_classes = [
-                IsAdminOrOfficer,
+                IsAuthenticated,
             ]
 
-        return [
-            permission()
-            for permission in permission_classes
-        ]
+        return [permission() for permission in permission_classes]
 
     def get_queryset(self):
-
         user = self.request.user
 
         if user.role == "ADMIN":
             return self.queryset
 
-        return self.queryset.filter(
-            officer=user
-        )
-
-    def perform_create(self, serializer):
-
-        complaint = serializer.validated_data[
-            "complaint"
-        ]
-
-        officer = serializer.validated_data[
-            "officer"
-        ]
-
-        department = serializer.validated_data[
-            "department"
-        ]
-
-        if officer.role != "OFFICER":
-            raise serializers.ValidationError(
-                {
-                    "officer": (
-                        "Selected user is not "
-                        "an officer."
-                    )
-                }
+        if user.role == "OFFICER":
+            return self.queryset.filter(
+                officer=user
             )
 
+        return self.queryset.none()
+
+    def perform_create(self, serializer):
+        officer = serializer.validated_data.get("officer")
+        department = serializer.validated_data.get("department")
+
+        if officer is None:
+            raise ValueError("Officer is required.")
+
+        if officer.role != "OFFICER":
+            raise ValueError(
+                "Selected user is not an officer."
+            )
+
+        if department is None:
+            raise ValueError("Department is required.")
+
         if officer.department_id != department.id:
-            raise serializers.ValidationError(
-                {
-                    "officer": (
-                        "Officer does not belong "
-                        "to the selected department."
-                    )
-                }
+            raise ValueError(
+                "Officer does not belong to the selected department."
             )
 
         serializer.save(
