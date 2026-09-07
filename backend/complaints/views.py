@@ -14,7 +14,11 @@ from accounts.permissions import (
 )
 from organizations.models import Department
 
-from .models import Complaint, ComplaintAssignment, ComplaintHistory
+from .models import (
+    Complaint,
+    ComplaintAssignment,
+    ComplaintHistory,
+)
 from .serializers import (
     ComplaintAssignmentSerializer,
     ComplaintHistorySerializer,
@@ -412,12 +416,17 @@ class ComplaintViewSet(viewsets.ModelViewSet):
 
         complaint = self.get_object()
 
-        history = ComplaintHistory.objects.filter(
-            complaint=complaint
-        ).select_related(
-            "changed_by"
-        ).order_by(
-            "created_at"
+        history = (
+            ComplaintHistory.objects
+            .filter(
+                complaint=complaint
+            )
+            .select_related(
+                "changed_by"
+            )
+            .order_by(
+                "created_at"
+            )
         )
 
         serializer = ComplaintHistorySerializer(
