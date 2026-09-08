@@ -2,13 +2,13 @@ from rest_framework import serializers
 
 from .models import (
     Complaint,
+    ComplaintAnalysis,
     ComplaintAssignment,
     ComplaintHistory,
 )
 
 
 class ComplaintSerializer(serializers.ModelSerializer):
-
     user_email = serializers.EmailField(
         source="user.email",
         read_only=True,
@@ -64,7 +64,6 @@ class ComplaintSerializer(serializers.ModelSerializer):
         ]
 
     def validate_title(self, value):
-
         value = value.strip()
 
         if len(value) < 5:
@@ -80,7 +79,6 @@ class ComplaintSerializer(serializers.ModelSerializer):
         return value
 
     def validate_description(self, value):
-
         value = value.strip()
 
         if len(value) < 10:
@@ -91,7 +89,6 @@ class ComplaintSerializer(serializers.ModelSerializer):
         return value
 
     def validate_location(self, value):
-
         if not value:
             return value
 
@@ -105,7 +102,6 @@ class ComplaintSerializer(serializers.ModelSerializer):
         return value
 
     def validate_latitude(self, value):
-
         if value is None:
             return value
 
@@ -117,7 +113,6 @@ class ComplaintSerializer(serializers.ModelSerializer):
         return value
 
     def validate_longitude(self, value):
-
         if value is None:
             return value
 
@@ -129,24 +124,75 @@ class ComplaintSerializer(serializers.ModelSerializer):
         return value
 
 
-class ComplaintAssignmentSerializer(
-    serializers.ModelSerializer
-):
-
-    officer_email = serializers.EmailField(
-        source="officer.email",
+class ComplaintAnalysisSerializer(serializers.ModelSerializer):
+    complaint_ticket_number = serializers.CharField(
+        source="complaint.ticket_number",
         read_only=True,
     )
 
-    department_name = serializers.CharField(
-        source="department.name",
+    predicted_category_name = serializers.CharField(
+        source="predicted_category.name",
         read_only=True,
     )
 
-    assigned_by_email = serializers.EmailField(
-        source="assigned_by.email",
+    predicted_department_name = serializers.CharField(
+        source="predicted_department.name",
         read_only=True,
     )
+
+    class Meta:
+        model = ComplaintAnalysis
+
+        fields = [
+            "id",
+            "complaint",
+            "complaint_ticket_number",
+            "summary",
+            "predicted_category",
+            "predicted_category_name",
+            "predicted_department",
+            "predicted_department_name",
+            "predicted_priority",
+            "urgency_score",
+            "confidence_score",
+            "model_name",
+            "created_at",
+            "updated_at",
+        ]
+
+        read_only_fields = [
+            "id",
+            "complaint_ticket_number",
+            "predicted_category_name",
+            "predicted_department_name",
+            "created_at",
+            "updated_at",
+        ]
+
+    def validate_urgency_score(self, value):
+        if value is None:
+            return value
+
+        if value < 0 or value > 100:
+            raise serializers.ValidationError(
+                "Urgency score must be between 0 and 100."
+            )
+
+        return value
+
+    def validate_confidence_score(self, value):
+        if value is None:
+            return value
+
+        if value < 0 or value > 100:
+            raise serializers.ValidationError(
+                "Confidence score must be between 0 and 100."
+            )
+
+        return value
+
+
+class ComplaintAssignmentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ComplaintAssignment
@@ -155,11 +201,8 @@ class ComplaintAssignmentSerializer(
             "id",
             "complaint",
             "department",
-            "department_name",
             "officer",
-            "officer_email",
             "assigned_by",
-            "assigned_by_email",
             "assigned_at",
             "unassigned_at",
             "reason",
@@ -168,18 +211,11 @@ class ComplaintAssignmentSerializer(
         read_only_fields = [
             "id",
             "assigned_by",
-            "assigned_by_email",
             "assigned_at",
-            "unassigned_at",
-            "department_name",
-            "officer_email",
         ]
 
 
-class ComplaintHistorySerializer(
-    serializers.ModelSerializer
-):
-
+class ComplaintHistorySerializer(serializers.ModelSerializer):
     changed_by_email = serializers.EmailField(
         source="changed_by.email",
         read_only=True,
@@ -191,21 +227,19 @@ class ComplaintHistorySerializer(
         fields = [
             "id",
             "complaint",
-            "old_status",
-            "new_status",
             "changed_by",
             "changed_by_email",
+            "old_status",
+            "new_status",
             "comment",
             "created_at",
         ]
 
         read_only_fields = [
             "id",
-            "complaint",
-            "old_status",
-            "new_status",
             "changed_by",
             "changed_by_email",
-            "comment",
+            "old_status",
+            "new_status",
             "created_at",
         ]
