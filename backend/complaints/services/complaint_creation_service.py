@@ -1,14 +1,13 @@
 from django.db import transaction
 
 from complaints.models import Complaint, ComplaintHistory
+from complaints.services.ai_orchestration_service import (
+    run_ai_analysis,
+)
 
 
 @transaction.atomic
 def create_complaint(*, validated_data, created_by):
-    """
-    Creates a complaint and records its initial SUBMITTED history.
-    """
-
     complaint = Complaint.objects.create(
         **validated_data,
         user=created_by,
@@ -21,5 +20,11 @@ def create_complaint(*, validated_data, created_by):
         new_status=complaint.status,
         comment="Complaint submitted.",
     )
+
+    run_ai_analysis(
+        complaint
+    )
+
+    complaint.refresh_from_db()
 
     return complaint

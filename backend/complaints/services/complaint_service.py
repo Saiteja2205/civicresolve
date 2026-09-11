@@ -3,10 +3,17 @@ from django.utils import timezone
 
 from complaints.models import Complaint, ComplaintHistory
 
+
 VALID_TRANSITIONS = {
     Complaint.Status.SUBMITTED: {
+        Complaint.Status.AI_ANALYZING,
         Complaint.Status.ASSIGNED,
         Complaint.Status.REJECTED,
+    },
+
+    Complaint.Status.AI_ANALYZING: {
+        Complaint.Status.ASSIGNED,
+        Complaint.Status.SUBMITTED,
     },
 
     Complaint.Status.ASSIGNED: {
@@ -45,6 +52,8 @@ VALID_TRANSITIONS = {
 
     Complaint.Status.REJECTED: set(),
 }
+
+
 @transaction.atomic
 def change_complaint_status(
     complaint,
