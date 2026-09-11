@@ -1,6 +1,7 @@
 from decimal import Decimal, InvalidOperation
 
 from complaints.models import Complaint
+from organizations.models import Category, Department
 
 
 VALID_PRIORITIES = {
@@ -12,16 +13,6 @@ VALID_PRIORITIES = {
 
 
 def validate_ai_output(data):
-    """
-    Validate structured output returned by the AI system.
-
-    Returns:
-        dict: Cleaned and validated AI output.
-
-    Raises:
-        ValueError: If the AI output is invalid.
-    """
-
     if not isinstance(data, dict):
         raise ValueError("AI output must be a JSON object.")
 
@@ -60,6 +51,80 @@ def validate_ai_output(data):
             "AI returned an invalid priority."
         )
 
+    predicted_category = data.get(
+        "predicted_category"
+    )
+
+    predicted_department = data.get(
+        "predicted_department"
+    )
+
+    if predicted_category is not None:
+        try:
+            predicted_category = int(
+                predicted_category
+            )
+        except (TypeError, ValueError):
+            raise ValueError(
+                "Predicted category must be a valid ID."
+            )
+
+        category = (
+            Category.objects
+            .filter(
+                id=predicted_category,
+                is_active=True,
+                department__is_active=True,
+            )
+            .select_related("department")
+            .first()
+        )
+
+        if category is None:
+            raise ValueError(
+                "AI returned an invalid or inactive category."
+            )
+
+        if predicted_department is None:
+            raise ValueError(
+                "Department is required when a category is predicted."
+            )
+
+        try:
+            predicted_department = int(
+                predicted_department
+            )
+        except (TypeError, ValueError):
+            raise ValueError(
+                "Predicted department must be a valid ID."
+            )
+
+        department = (
+            Department.objects
+            .filter(
+                id=predicted_department,
+                is_active=True,
+            )
+            .first()
+        )
+
+        if department is None:
+            raise ValueError(
+                "AI returned an invalid or inactive department."
+            )
+
+        if category.department_id != department.id:
+            raise ValueError(
+                "Predicted category does not belong "
+                "to the predicted department."
+            )
+
+    elif predicted_department is not None:
+        raise ValueError(
+            "Department cannot be predicted without "
+            "a predicted category."
+        )
+
     try:
         urgency_score = Decimal(
             str(data["urgency_score"])
@@ -90,12 +155,8 @@ def validate_ai_output(data):
 
     return {
         "summary": summary,
-        "predicted_category": data.get(
-            "predicted_category"
-        ),
-        "predicted_department": data.get(
-            "predicted_department"
-        ),
+        "predicted_category": predicted_category,
+        "predicted_department": predicted_department,
         "predicted_priority": predicted_priority,
         "urgency_score": urgency_score,
         "confidence_score": confidence_score,
