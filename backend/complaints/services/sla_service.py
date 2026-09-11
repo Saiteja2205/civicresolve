@@ -1,31 +1,65 @@
 from datetime import timedelta
 
-from django.utils import timezone
+from django.db import transaction
 
-from complaints.models import ComplaintSLA, SLAPolicy
+from complaints.models import Complaint, ComplaintSLA, SLAPolicy
 
 
-def create_sla_for_complaint(complaint):
-    policy = SLAPolicy.objects.filter(
-        priority=complaint.priority,
-        is_active=True,
-    ).first()
+class SLAError(Exception):
+    """
+    Raised when an SLA cannot be created safely.
+    """
+    pass
 
-    if not policy:
-        raise ValueError(
-            f"No active SLA policy found for priority "
-            f"{complaint.priority}"
+
+def get_sla_policy_for_priority(priority):
+    """
+    Return the active SLA policy for a complaint priority.
+    """
+
+    try:
+        return SLAPolicy.objects.get(
+            priority=priority,
+            is_active=True,
         )
+    except SLAPolicy.DoesNotExist as exc:
+        raise SLAError(
+            f"No active SLA policy exists for priority '{priority}'."
+        ) from exc
 
-    now = timezone.now()
 
-    return ComplaintSLA.objects.create(
-        complaint=complaint,
-        policy=policy,
-        response_deadline=(
-            now + timedelta(hours=policy.response_time_hours)
-        ),
-        resolution_deadline=(
-            now + timedelta(hours=policy.resolution_time_hours)
-        ),
+@transaction.atomic
+def create_complaint_sla(complaint):
+    """
+    Create or update the SLA for a complaint based on its priority.
+
+    Response and resolution deadlines are calculated from the
+    complaint creation time.
+    """
+
+    policy = get_sla_policy_for_priority(
+        complaint.priority
     )
+
+    start_time = complaint.created_at
+
+    response_deadline = (
+        start_time
+        + timedelta(hours=policy.response_time_hours)
+    )
+
+    resolution_deadline = (
+        start_time
+        + timedelta(hours=policy.resolution_time_hours)
+    )
+
+    sla, created = ComplaintSLA.objects.update_or_create(
+        complaint=complaint,
+        defaults={
+            "policy": policy,
+            "response_deadline": response_deadline,
+            "resolution_deadline": resolution_deadline,
+        },
+    )
+
+    return sla
