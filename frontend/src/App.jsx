@@ -20,7 +20,8 @@ import ComplaintListPage from "./pages/ComplaintListPage.jsx";
 import LoadingScreen from "./pages/LoadingScreen.jsx";
 import OfficerDashboard from "./pages/OfficerDashboard.jsx";
 import SLADashboard from "./pages/SLADashboard.jsx";
-
+import ActivityPage from "./pages/ActivityPage.jsx";
+import ProfilePage from "./pages/ProfilePage.jsx";
 
 function LoginPage() {
   const { login } = useAuth();
@@ -341,7 +342,35 @@ function App() {
             </RoleRoute>
           }
         />
+        <Route
+          path="profile"
+          element={
+            <RoleRoute
+              allowedRoles={[
+                "USER",
+                "OFFICER",
+                "ADMIN",
+              ]}
+            >
+              <ProfilePage />
+            </RoleRoute>
+          }
+        />
 
+        <Route
+          path="activity"
+          element={
+            <RoleRoute
+              allowedRoles={[
+                "USER",
+                "OFFICER",
+                "ADMIN",
+              ]}
+            >
+              <ActivityPage />
+            </RoleRoute>
+          }
+        />
         <Route
           path="complaints"
           element={

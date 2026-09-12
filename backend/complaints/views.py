@@ -1,6 +1,6 @@
 from django.db import models, transaction
 from django.utils import timezone
-
+from rest_framework import generics
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -711,4 +711,35 @@ class ComplaintAssignmentViewSet(
 
         serializer.save(
             assigned_by=self.request.user
+        )
+class UserActivityListView(generics.ListAPIView):
+    permission_classes = [
+        IsAuthenticated,
+    ]
+    serializer_class = ComplaintHistorySerializer
+
+    def get_queryset(self):
+        user = self.request.user
+
+        queryset = ComplaintHistory.objects.select_related(
+            "complaint",
+            "changed_by",
+        )
+
+        if user.role == User.Role.ADMIN:
+            return queryset.order_by(
+                "-created_at"
+            )
+
+        if user.role == User.Role.OFFICER:
+            return queryset.filter(
+                complaint__assignments__officer=user,
+            ).distinct().order_by(
+                "-created_at"
+            )
+
+        return queryset.filter(
+            complaint__user=user,
+        ).order_by(
+            "-created_at"
         )

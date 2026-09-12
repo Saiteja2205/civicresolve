@@ -83,7 +83,23 @@ function DashboardLayout() {
                 Overview
               </span>
             </NavLink>
+            <NavLink
+              to="/dashboard/activity"
+              className={getNavClass}
+            >
+              <span>
+                Activity
+              </span>
+            </NavLink>
 
+            <NavLink
+              to="/dashboard/profile"
+              className={getNavClass}
+            >
+              <span>
+                Profile
+              </span>
+            </NavLink>
 
             {user?.role === "USER" && (
               <>

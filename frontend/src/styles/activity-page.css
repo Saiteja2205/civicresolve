@@ -1,0 +1,290 @@
+.activity-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+
+.activity-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+
+.activity-eyebrow,
+.activity-card-eyebrow {
+  margin: 0 0 8px;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+
+.activity-header h1 {
+  margin: 0;
+  font-size: 2rem;
+}
+
+
+.activity-header p:last-child {
+  max-width: 720px;
+  margin: 10px 0 0;
+  color: #64748b;
+  line-height: 1.6;
+}
+
+
+.activity-refresh-button {
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+
+.activity-refresh-button:hover:not(:disabled) {
+  background: #f8fafc;
+}
+
+
+.activity-refresh-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+
+.activity-error {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 13px 16px;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 0.85rem;
+}
+
+
+.activity-error button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+
+.activity-card {
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 7px 20px rgba(15, 23, 42, 0.05);
+}
+
+
+.activity-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 22px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+
+.activity-card-header h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+
+.activity-card-header > span {
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+
+.activity-list {
+  display: flex;
+  flex-direction: column;
+}
+
+
+.activity-item {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 12px;
+  padding: 20px 22px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+
+.activity-item:last-child {
+  border-bottom: 0;
+}
+
+
+.activity-indicator {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+
+.activity-indicator::after {
+  content: "";
+  position: absolute;
+  top: 18px;
+  bottom: -38px;
+  width: 1px;
+  background: #e2e8f0;
+}
+
+
+.activity-item:last-child
+  .activity-indicator::after {
+  display: none;
+}
+
+
+.activity-indicator span {
+  position: relative;
+  z-index: 1;
+  width: 9px;
+  height: 9px;
+  margin-top: 5px;
+  border-radius: 50%;
+  background: #2563eb;
+}
+
+
+.activity-content {
+  min-width: 0;
+}
+
+
+.activity-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+
+.activity-top strong {
+  color: #2563eb;
+  font-family: monospace;
+  font-size: 0.76rem;
+}
+
+
+.activity-top span {
+  color: #64748b;
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+
+.activity-content > p {
+  margin: 7px 0 0;
+  color: #0f172a;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+
+.activity-comment {
+  margin-top: 9px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+
+.activity-content small {
+  display: block;
+  margin-top: 8px;
+  color: #64748b;
+  font-size: 0.7rem;
+}
+
+
+.activity-view-link {
+  display: inline-block;
+  margin-top: 9px;
+  color: #2563eb;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+
+.activity-view-link:hover {
+  text-decoration: underline;
+}
+
+
+.activity-empty {
+  padding: 60px 22px;
+  text-align: center;
+}
+
+
+.activity-empty h3 {
+  margin: 0;
+}
+
+
+.activity-empty p {
+  margin: 8px 0 0;
+  color: #64748b;
+}
+
+
+.activity-loading {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 22px;
+}
+
+
+.activity-loading div {
+  height: 55px;
+  border-radius: 9px;
+  background: #f1f5f9;
+}
+
+
+@media (max-width: 600px) {
+  .activity-header {
+    flex-direction: column;
+  }
+
+  .activity-refresh-button {
+    width: 100%;
+  }
+
+  .activity-top {
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .activity-top span {
+    white-space: normal;
+  }
+}
