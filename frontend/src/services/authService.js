@@ -16,3 +16,9 @@ export async function refreshAccessToken(refreshToken) {
 
   return response.data;
 }
+
+export async function getCurrentUser() {
+  const response = await api.get("/auth/me/");
+
+  return response.data;
+}

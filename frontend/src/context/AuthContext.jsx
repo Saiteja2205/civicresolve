@@ -1,5 +1,14 @@
-import { createContext, useContext, useState } from "react";
-import { login as loginRequest } from "../services/authService";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
+
+import {
+  getCurrentUser,
+  login as loginRequest,
+} from "../services/authService";
 
 const AuthContext = createContext(null);
 
@@ -12,6 +21,12 @@ export function AuthProvider({ children }) {
     () => localStorage.getItem("refresh_token"),
   );
 
+  const [user, setUser] = useState(null);
+
+  const [isLoadingUser, setIsLoadingUser] = useState(
+    Boolean(accessToken),
+  );
+
   const login = async (email, password) => {
     const data = await loginRequest(email, password);
 
@@ -21,7 +36,14 @@ export function AuthProvider({ children }) {
     setAccessToken(data.access);
     setRefreshToken(data.refresh);
 
-    return data;
+    const currentUser = await getCurrentUser();
+
+    setUser(currentUser);
+
+    return {
+      ...data,
+      user: currentUser,
+    };
   };
 
   const logout = () => {
@@ -30,16 +52,46 @@ export function AuthProvider({ children }) {
 
     setAccessToken(null);
     setRefreshToken(null);
+    setUser(null);
+    setIsLoadingUser(false);
   };
 
-  const isAuthenticated = Boolean(accessToken);
+  useEffect(() => {
+    const loadCurrentUser = async () => {
+      if (!accessToken) {
+        setIsLoadingUser(false);
+        return;
+      }
+
+      try {
+        const currentUser = await getCurrentUser();
+
+        setUser(currentUser);
+      } catch {
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("refresh_token");
+
+        setAccessToken(null);
+        setRefreshToken(null);
+        setUser(null);
+      } finally {
+        setIsLoadingUser(false);
+      }
+    };
+
+    loadCurrentUser();
+  }, [accessToken]);
+
+  const isAuthenticated = Boolean(accessToken && user);
 
   return (
     <AuthContext.Provider
       value={{
         accessToken,
         refreshToken,
+        user,
         isAuthenticated,
+        isLoadingUser,
         login,
         logout,
       }}
@@ -53,7 +105,9 @@ export function useAuth() {
   const context = useContext(AuthContext);
 
   if (!context) {
-    throw new Error("useAuth must be used inside an AuthProvider.");
+    throw new Error(
+      "useAuth must be used inside an AuthProvider.",
+    );
   }
 
   return context;

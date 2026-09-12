@@ -16,6 +16,11 @@ urlpatterns = [
     ),
 
     path(
+        "api/auth/",
+        include("accounts.urls"),
+    ),
+
+    path(
         "api/auth/token/",
         TokenObtainPairView.as_view(),
         name="token_obtain_pair",
@@ -26,8 +31,9 @@ urlpatterns = [
         TokenRefreshView.as_view(),
         name="token_refresh",
     ),
+
     path(
-    "api-auth/",
-    include("rest_framework.urls"),
+        "api-auth/",
+        include("rest_framework.urls"),
     ),
 ]
