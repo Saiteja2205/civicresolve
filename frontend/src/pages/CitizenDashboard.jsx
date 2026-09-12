@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 import { useAuth } from "../context/AuthContext.jsx";
 import "../styles/dashboard-pages.css";
 
@@ -19,40 +21,53 @@ function CitizenDashboard() {
           </p>
         </div>
 
-        <button type="button" className="dashboard-primary-action">
-          Submit a complaint
-        </button>
+        <Link
+          to="/dashboard/complaints"
+          className="dashboard-primary-action"
+        >
+          View my complaints
+        </Link>
       </div>
 
       <div className="dashboard-stat-grid">
         <div className="dashboard-stat-card">
           <span>My complaints</span>
-          <strong>—</strong>
-          <small>Coming in the next phase</small>
+          <strong>Live</strong>
+          <small>
+            Open the complaints workspace
+          </small>
         </div>
 
         <div className="dashboard-stat-card">
-          <span>In progress</span>
-          <strong>—</strong>
-          <small>Live complaint tracking</small>
+          <span>Tracking</span>
+          <strong>Live</strong>
+          <small>
+            View complaint status history
+          </small>
         </div>
 
         <div className="dashboard-stat-card">
-          <span>Resolved</span>
-          <strong>—</strong>
-          <small>Resolution history</small>
+          <span>Resolution</span>
+          <strong>Live</strong>
+          <small>
+            Follow your grievance journey
+          </small>
         </div>
       </div>
 
       <div className="dashboard-info-card">
-        <p className="dashboard-eyebrow">CIVICRESOLVE</p>
+        <p className="dashboard-eyebrow">
+          COMPLAINT TRACKING
+        </p>
 
-        <h2>Everything about your grievance, in one place.</h2>
+        <h2>
+          Your grievance journey is now visible.
+        </h2>
 
         <p>
-          Submit an issue, track its progress, and see how it
-          moves through analysis, department routing, officer
-          assignment, and resolution.
+          Open My complaints to see your submitted
+          grievances, current status, priority,
+          department routing, and complete status history.
         </p>
       </div>
     </section>

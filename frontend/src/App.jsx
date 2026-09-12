@@ -5,6 +5,8 @@ import { useAuth } from "./context/AuthContext.jsx";
 import DashboardLayout from "./layouts/DashboardLayout.jsx";
 import AdminDashboard from "./pages/AdminDashboard.jsx";
 import CitizenDashboard from "./pages/CitizenDashboard.jsx";
+import ComplaintDetailPage from "./pages/ComplaintDetailPage.jsx";
+import ComplaintListPage from "./pages/ComplaintListPage.jsx";
 import LoadingScreen from "./pages/LoadingScreen.jsx";
 import OfficerDashboard from "./pages/OfficerDashboard.jsx";
 import "./App.css";
@@ -268,7 +270,16 @@ function App() {
           path="complaints"
           element={
             <RoleRoute allowedRoles={["USER", "ADMIN"]}>
-              <DashboardRedirect />
+              <ComplaintListPage />
+            </RoleRoute>
+          }
+        />
+
+        <Route
+          path="complaints/:complaintId"
+          element={
+            <RoleRoute allowedRoles={["USER", "ADMIN"]}>
+              <ComplaintDetailPage />
             </RoleRoute>
           }
         />
@@ -277,7 +288,16 @@ function App() {
           path="assigned"
           element={
             <RoleRoute allowedRoles={["OFFICER"]}>
-              <OfficerDashboard />
+              <ComplaintListPage />
+            </RoleRoute>
+          }
+        />
+
+        <Route
+          path="assigned/:complaintId"
+          element={
+            <RoleRoute allowedRoles={["OFFICER"]}>
+              <ComplaintDetailPage />
             </RoleRoute>
           }
         />
