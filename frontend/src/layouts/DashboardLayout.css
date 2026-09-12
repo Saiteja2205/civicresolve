@@ -211,10 +211,15 @@
     flex-direction: row;
     overflow-x: auto;
     padding: 0 10px 12px;
+    gap: 6px;
+    -webkit-overflow-scrolling: touch;
   }
 
   .dashboard-nav-link {
     flex: 0 0 auto;
+    min-height: 40px;
+    padding: 0 12px;
+    white-space: nowrap;
   }
 
   .sidebar-footer {

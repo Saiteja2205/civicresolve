@@ -627,3 +627,16 @@
     gap: 4px;
   }
 }
+/* =========================================
+   DAY 15 — RESPONSIVE TABLES
+   ========================================= */
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-responsive table {
+  min-width: 720px;
+}
