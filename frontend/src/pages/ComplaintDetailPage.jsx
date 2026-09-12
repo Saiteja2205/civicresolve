@@ -18,11 +18,13 @@ import {
 
 import ComplaintPriorityBadge from "../components/ComplaintPriorityBadge.jsx";
 import ComplaintStatusBadge from "../components/ComplaintStatusBadge.jsx";
+import CitizenResolutionFeedback from "../components/CitizenResolutionFeedback.jsx";
 
 import "../styles/complaints.css";
 import "../styles/complaint-actions.css";
 import "../styles/admin-actions.css";
 import "../styles/admin-assignment.css";
+import "../styles/citizen-resolution.css";
 
 
 function getBackPath(role) {
@@ -188,6 +190,9 @@ function ComplaintDetailPage() {
 
   const isAdmin =
     user?.role === "ADMIN";
+
+  const isCitizen =
+    user?.role === "USER";
 
 
   async function loadComplaint() {
@@ -361,8 +366,10 @@ function ComplaintDetailPage() {
         {
           officer_id:
             Number(selectedOfficer),
+
           department_id:
             Number(selectedDepartment),
+
           reason:
             "Officer selected by administrator.",
         },
@@ -513,7 +520,9 @@ function ComplaintDetailPage() {
     return (
       <section className="complaint-detail-page">
         <div className="complaint-detail-error">
-          <h2>Complaint unavailable</h2>
+          <h2>
+            Complaint unavailable
+          </h2>
 
           <p>
             {error ||
@@ -544,6 +553,7 @@ function ComplaintDetailPage() {
       complaint.status,
     );
 
+
   const canTakeOfficerAction =
     isOfficer &&
     [
@@ -554,10 +564,12 @@ function ComplaintDetailPage() {
       complaint.status,
     );
 
+
   const canCloseComplaint =
     isAdmin &&
     complaint.status ===
       "RESOLVED";
+
 
   const canManageAssignment =
     isAdmin &&
@@ -569,6 +581,7 @@ function ComplaintDetailPage() {
     ].includes(
       complaint.status,
     );
+
 
   const activeAssignment =
     assignments.find(
@@ -593,7 +606,6 @@ function ComplaintDetailPage() {
 
 
       <div className="complaint-detail-header">
-
         <div>
           <p className="complaint-detail-eyebrow">
             COMPLAINT
@@ -617,7 +629,6 @@ function ComplaintDetailPage() {
 
 
         <div className="complaint-detail-badges">
-
           <ComplaintStatusBadge
             status={
               complaint.status
@@ -629,9 +640,7 @@ function ComplaintDetailPage() {
               complaint.priority
             }
           />
-
         </div>
-
       </div>
 
 
@@ -639,7 +648,6 @@ function ComplaintDetailPage() {
         <section className="admin-assignment-card">
 
           <div className="admin-assignment-header">
-
             <div>
               <p className="admin-assignment-eyebrow">
                 ADMINISTRATOR CONTROL
@@ -665,6 +673,7 @@ function ComplaintDetailPage() {
                   setShowAssignmentBox(
                     true,
                   );
+
                   setAssignmentError(
                     "",
                   );
@@ -675,7 +684,6 @@ function ComplaintDetailPage() {
                   : "Assign officer"}
               </button>
             )}
-
           </div>
 
 
@@ -704,7 +712,6 @@ function ComplaintDetailPage() {
             <div className="admin-assignment-form">
 
               <div className="admin-assignment-field">
-
                 <label htmlFor="assignment-department">
                   Department
                 </label>
@@ -739,14 +746,11 @@ function ComplaintDetailPage() {
                       </option>
                     ),
                   )}
-
                 </select>
-
               </div>
 
 
               <div className="admin-assignment-field">
-
                 <label htmlFor="assignment-officer">
                   Officer
                 </label>
@@ -789,9 +793,7 @@ function ComplaintDetailPage() {
                       </option>
                     ),
                   )}
-
                 </select>
-
               </div>
 
 
@@ -814,13 +816,17 @@ function ComplaintDetailPage() {
                     setShowAssignmentBox(
                       false,
                     );
+
                     setSelectedDepartment(
                       "",
                     );
+
                     setSelectedOfficer(
                       "",
                     );
+
                     setOfficers([]);
+
                     setAssignmentError(
                       "",
                     );
@@ -941,7 +947,9 @@ function ComplaintDetailPage() {
                     setShowActionBox(
                       false,
                     );
+
                     setComment("");
+
                     setActionError(
                       "",
                     );
@@ -1008,6 +1016,7 @@ function ComplaintDetailPage() {
                 setShowCloseBox(
                   true,
                 );
+
                 setActionError(
                   "",
                 );
@@ -1060,7 +1069,9 @@ function ComplaintDetailPage() {
                     setShowCloseBox(
                       false,
                     );
+
                     setComment("");
+
                     setActionError(
                       "",
                     );
@@ -1095,6 +1106,21 @@ function ComplaintDetailPage() {
 
         </section>
       )}
+
+
+      {/* DAY 11 — CITIZEN RESOLUTION FEEDBACK */}
+
+      {isCitizen &&
+        complaint.status === "RESOLVED" && (
+          <CitizenResolutionFeedback
+            complaint={complaint}
+            onReopened={async () => {
+              await refreshComplaintData(
+                complaint.id,
+              );
+            }}
+          />
+        )}
 
 
       <div className="complaint-detail-grid">
@@ -1150,6 +1176,7 @@ function ComplaintDetailPage() {
 
                       <div className="complaint-timeline-marker" />
 
+
                       <div className="complaint-timeline-content">
 
                         <div className="complaint-timeline-header">
@@ -1201,11 +1228,9 @@ function ComplaintDetailPage() {
           <article className="complaint-detail-card">
 
             <div className="complaint-detail-card-header">
-
               <h2>
                 Complaint information
               </h2>
-
             </div>
 
 
@@ -1336,6 +1361,25 @@ function ComplaintDetailPage() {
           <span>
             This complaint has completed its
             resolution lifecycle.
+          </span>
+
+        </div>
+      )}
+
+
+      {complaint.status ===
+        "REOPENED" && (
+        <div className="complaint-resolution-notice">
+
+          <strong>
+            Complaint reopened
+          </strong>
+
+          <span>
+            The citizen has indicated that
+            the previous resolution was not
+            satisfactory. The complaint is
+            waiting for reassignment.
           </span>
 
         </div>

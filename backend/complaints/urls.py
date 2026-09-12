@@ -1,5 +1,7 @@
+from django.urls import path
 from rest_framework.routers import DefaultRouter
 
+from .resolution_views import ComplaintReopenView
 from .views import (
     ComplaintAssignmentViewSet,
     ComplaintSLAViewSet,
@@ -24,8 +26,16 @@ router.register(
 router.register(
     r"sla",
     ComplaintSLAViewSet,
-    basename="complaint-sla",
+    basename="sla",
 )
 
 
-urlpatterns = router.urls
+urlpatterns = [
+    path(
+        "complaints/<int:complaint_id>/reopen/",
+        ComplaintReopenView.as_view(),
+        name="complaint-reopen",
+    ),
+]
+
+urlpatterns += router.urls

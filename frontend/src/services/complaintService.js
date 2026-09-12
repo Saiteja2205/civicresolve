@@ -116,9 +116,13 @@ export async function assignComplaint(
 
 export async function acknowledgeComplaint(
   complaintId,
+  comment = "",
 ) {
   const response = await api.post(
     `/complaints/${complaintId}/acknowledge/`,
+    {
+      comment,
+    },
   );
 
   return response.data;
@@ -127,9 +131,13 @@ export async function acknowledgeComplaint(
 
 export async function startComplaint(
   complaintId,
+  comment = "",
 ) {
   const response = await api.post(
     `/complaints/${complaintId}/start/`,
+    {
+      comment,
+    },
   );
 
   return response.data;
@@ -138,9 +146,13 @@ export async function startComplaint(
 
 export async function resolveComplaint(
   complaintId,
+  comment = "",
 ) {
   const response = await api.post(
     `/complaints/${complaintId}/resolve/`,
+    {
+      comment,
+    },
   );
 
   return response.data;
@@ -149,9 +161,13 @@ export async function resolveComplaint(
 
 export async function closeComplaint(
   complaintId,
+  comment = "",
 ) {
   const response = await api.post(
     `/complaints/${complaintId}/close/`,
+    {
+      comment,
+    },
   );
 
   return response.data;
@@ -165,6 +181,21 @@ export async function getSLARecords(
     "/sla/",
     {
       params,
+    },
+  );
+
+  return response.data;
+}
+
+
+export async function reopenComplaint(
+  complaintId,
+  comment,
+) {
+  const response = await api.post(
+    `/complaints/${complaintId}/reopen/`,
+    {
+      comment,
     },
   );
 
