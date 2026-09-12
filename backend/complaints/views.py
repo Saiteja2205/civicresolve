@@ -1,4 +1,4 @@
-from django.db import transaction
+from django.db import models, transaction
 from django.utils import timezone
 
 from rest_framework import status, viewsets
@@ -14,16 +14,20 @@ from accounts.permissions import (
     IsOfficerUserRole,
 )
 
-from complaints.models import (
+from .models import (
     Complaint,
+    ComplaintAnalysis,
     ComplaintAssignment,
     ComplaintHistory,
+    ComplaintSLA,
 )
 
-from complaints.serializers import (
+from .serializers import (
+    ComplaintSerializer,
+    ComplaintAnalysisSerializer,
     ComplaintAssignmentSerializer,
     ComplaintHistorySerializer,
-    ComplaintSerializer,
+    ComplaintSLASerializer,
 )
 
 from complaints.services.complaint_creation_service import (
@@ -543,7 +547,64 @@ class ComplaintViewSet(viewsets.ModelViewSet):
             status=status.HTTP_200_OK,
         )
 
+class ComplaintSLAViewSet(
+    viewsets.ReadOnlyModelViewSet
+):
+    serializer_class = ComplaintSLASerializer
+    permission_classes = [
+        IsAuthenticated,
+        IsAdminUserRole,
+    ]
 
+    queryset = (
+        ComplaintSLA.objects
+        .select_related(
+            "complaint",
+            "policy",
+        )
+        .order_by(
+            "-response_breached",
+            "-resolution_breached",
+            "resolution_deadline",
+        )
+    )
+
+    def get_queryset(self):
+        queryset = self.queryset
+
+        status_filter = self.request.query_params.get(
+            "status"
+        )
+
+        priority_filter = self.request.query_params.get(
+            "priority"
+        )
+
+        breached_filter = self.request.query_params.get(
+            "breached"
+        )
+
+        if status_filter:
+            queryset = queryset.filter(
+                complaint__status=status_filter
+            )
+
+        if priority_filter:
+            queryset = queryset.filter(
+                complaint__priority=priority_filter
+            )
+
+        if breached_filter == "true":
+            queryset = queryset.filter(
+                models.Q(
+                    response_breached=True
+                )
+                | models.Q(
+                    resolution_breached=True
+                )
+            )
+
+        return queryset
 class ComplaintAssignmentViewSet(
     viewsets.ModelViewSet
 ):

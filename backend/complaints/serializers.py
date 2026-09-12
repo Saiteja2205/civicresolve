@@ -5,6 +5,7 @@ from .models import (
     ComplaintAnalysis,
     ComplaintAssignment,
     ComplaintHistory,
+    ComplaintSLA,
 )
 
 
@@ -236,7 +237,65 @@ class ComplaintAssignmentSerializer(
             "department_name",
         ]
 
+class ComplaintSLASerializer(serializers.ModelSerializer):
+    complaint_ticket_number = serializers.CharField(
+        source="complaint.ticket_number",
+        read_only=True,
+    )
 
+    priority = serializers.CharField(
+        source="complaint.priority",
+        read_only=True,
+    )
+
+    status = serializers.CharField(
+        source="complaint.status",
+        read_only=True,
+    )
+
+    title = serializers.CharField(
+        source="complaint.title",
+        read_only=True,
+    )
+
+    policy_priority = serializers.CharField(
+        source="policy.priority",
+        read_only=True,
+    )
+
+    response_time_hours = serializers.IntegerField(
+        source="policy.response_time_hours",
+        read_only=True,
+    )
+
+    resolution_time_hours = serializers.IntegerField(
+        source="policy.resolution_time_hours",
+        read_only=True,
+    )
+
+    class Meta:
+        model = ComplaintSLA
+
+        fields = [
+            "id",
+            "complaint",
+            "complaint_ticket_number",
+            "title",
+            "priority",
+            "status",
+            "policy",
+            "policy_priority",
+            "response_time_hours",
+            "resolution_time_hours",
+            "response_deadline",
+            "resolution_deadline",
+            "response_completed_at",
+            "resolution_completed_at",
+            "response_breached",
+            "resolution_breached",
+        ]
+
+        read_only_fields = fields
 class ComplaintHistorySerializer(
     serializers.ModelSerializer
 ):

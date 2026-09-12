@@ -160,6 +160,13 @@ function AdminDashboard() {
           >
             View all complaints
           </Link>
+
+          <Link
+            to="/dashboard/sla"
+            className="admin-primary-button"
+          >
+            SLA monitoring
+          </Link>
         </div>
       </header>
 

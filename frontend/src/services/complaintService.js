@@ -1,9 +1,12 @@
-import api from "./api";
+import api from "./api.js";
 
 
-export async function getComplaints() {
+export async function getComplaints(params = {}) {
   const response = await api.get(
     "/complaints/",
+    {
+      params,
+    },
   );
 
   return response.data;
@@ -36,7 +39,12 @@ export async function getComplaintAssignments(
   complaintId,
 ) {
   const response = await api.get(
-    `/assignments/?complaint=${complaintId}`,
+    "/assignments/",
+    {
+      params: {
+        complaint: complaintId,
+      },
+    },
   );
 
   return response.data;
@@ -62,14 +70,19 @@ export async function getDepartments() {
 
 
 export async function getOfficers(
-  departmentId = "",
+  departmentId = null,
 ) {
-  const endpoint = departmentId
-    ? `/organizations/officers/?department=${departmentId}`
-    : "/organizations/officers/";
+  const params = {};
+
+  if (departmentId) {
+    params.department = departmentId;
+  }
 
   const response = await api.get(
-    endpoint,
+    "/organizations/officers/",
+    {
+      params,
+    },
   );
 
   return response.data;
@@ -103,13 +116,9 @@ export async function assignComplaint(
 
 export async function acknowledgeComplaint(
   complaintId,
-  comment = "",
 ) {
   const response = await api.post(
     `/complaints/${complaintId}/acknowledge/`,
-    comment.trim()
-      ? { comment: comment.trim() }
-      : {},
   );
 
   return response.data;
@@ -118,13 +127,9 @@ export async function acknowledgeComplaint(
 
 export async function startComplaint(
   complaintId,
-  comment = "",
 ) {
   const response = await api.post(
     `/complaints/${complaintId}/start/`,
-    comment.trim()
-      ? { comment: comment.trim() }
-      : {},
   );
 
   return response.data;
@@ -133,13 +138,9 @@ export async function startComplaint(
 
 export async function resolveComplaint(
   complaintId,
-  comment = "",
 ) {
   const response = await api.post(
     `/complaints/${complaintId}/resolve/`,
-    comment.trim()
-      ? { comment: comment.trim() }
-      : {},
   );
 
   return response.data;
@@ -148,13 +149,23 @@ export async function resolveComplaint(
 
 export async function closeComplaint(
   complaintId,
-  comment = "",
 ) {
   const response = await api.post(
     `/complaints/${complaintId}/close/`,
-    comment.trim()
-      ? { comment: comment.trim() }
-      : {},
+  );
+
+  return response.data;
+}
+
+
+export async function getSLARecords(
+  params = {},
+) {
+  const response = await api.get(
+    "/sla/",
+    {
+      params,
+    },
   );
 
   return response.data;

@@ -18,6 +18,7 @@ import ComplaintDetailPage from "./pages/ComplaintDetailPage.jsx";
 import ComplaintListPage from "./pages/ComplaintListPage.jsx";
 import LoadingScreen from "./pages/LoadingScreen.jsx";
 import OfficerDashboard from "./pages/OfficerDashboard.jsx";
+import SLADashboard from "./pages/SLADashboard.jsx";
 
 
 function LoginPage() {
@@ -376,6 +377,17 @@ function App() {
               allowedRoles={["OFFICER"]}
             >
               <ComplaintDetailPage />
+            </RoleRoute>
+          }
+        />
+
+        <Route
+          path="sla"
+          element={
+            <RoleRoute
+              allowedRoles={["ADMIN"]}
+            >
+              <SLADashboard />
             </RoleRoute>
           }
         />
