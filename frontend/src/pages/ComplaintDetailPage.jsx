@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext.jsx";
 
 import {
   acknowledgeComplaint,
+  closeComplaint,
   getComplaint,
   getComplaintHistory,
   resolveComplaint,
@@ -16,6 +17,7 @@ import ComplaintStatusBadge from "../components/ComplaintStatusBadge.jsx";
 
 import "../styles/complaints.css";
 import "../styles/complaint-actions.css";
+import "../styles/admin-actions.css";
 
 
 function getBackPath(role) {
@@ -125,6 +127,9 @@ function ComplaintDetailPage() {
   const [showActionBox, setShowActionBox] =
     useState(false);
 
+  const [showCloseBox, setShowCloseBox] =
+    useState(false);
+
 
   async function loadComplaint() {
     try {
@@ -164,7 +169,24 @@ function ComplaintDetailPage() {
   }, [complaintId]);
 
 
-  async function handleAction() {
+  async function refreshComplaintData(id) {
+    const [updatedComplaint, updatedHistory] =
+      await Promise.all([
+        getComplaint(id),
+        getComplaintHistory(id),
+      ]);
+
+    setComplaint(updatedComplaint);
+
+    setHistory(
+      Array.isArray(updatedHistory)
+        ? updatedHistory
+        : updatedHistory?.results || [],
+    );
+  }
+
+
+  async function handleOfficerAction() {
     if (!complaint?.id) {
       setActionError(
         "Complaint ID is missing. Please reload the page.",
@@ -199,30 +221,8 @@ function ComplaintDetailPage() {
         return;
       }
 
-      /*
-       * IMPORTANT:
-       *
-       * The action endpoints return a small status
-       * response, not the complete complaint object.
-       *
-       * Therefore we must reload the complete complaint
-       * instead of doing:
-       *
-       * setComplaint(response)
-       */
-
-      const [updatedComplaint, updatedHistory] =
-        await Promise.all([
-          getComplaint(complaint.id),
-          getComplaintHistory(complaint.id),
-        ]);
-
-      setComplaint(updatedComplaint);
-
-      setHistory(
-        Array.isArray(updatedHistory)
-          ? updatedHistory
-          : updatedHistory?.results || [],
+      await refreshComplaintData(
+        complaint.id,
       );
 
       setComment("");
@@ -230,6 +230,51 @@ function ComplaintDetailPage() {
     } catch (requestError) {
       console.error(
         "Complaint action failed:",
+        requestError,
+      );
+
+      setActionError(
+        getApiErrorMessage(requestError),
+      );
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+
+  async function handleCloseComplaint() {
+    if (!complaint?.id) {
+      setActionError(
+        "Complaint ID is missing. Please reload the page.",
+      );
+      return;
+    }
+
+    if (complaint.status !== "RESOLVED") {
+      setActionError(
+        "Only resolved complaints can be closed.",
+      );
+      return;
+    }
+
+    setActionLoading(true);
+    setActionError("");
+
+    try {
+      await closeComplaint(
+        complaint.id,
+        comment,
+      );
+
+      await refreshComplaintData(
+        complaint.id,
+      );
+
+      setComment("");
+      setShowCloseBox(false);
+    } catch (requestError) {
+      console.error(
+        "Complaint close action failed:",
         requestError,
       );
 
@@ -279,6 +324,9 @@ function ComplaintDetailPage() {
   const isOfficer =
     user?.role === "OFFICER";
 
+  const isAdmin =
+    user?.role === "ADMIN";
+
   const actionLabel =
     getActionLabel(complaint.status);
 
@@ -287,7 +335,7 @@ function ComplaintDetailPage() {
       complaint.status,
     );
 
-  const canTakeAction =
+  const canTakeOfficerAction =
     isOfficer &&
     [
       "ASSIGNED",
@@ -295,9 +343,14 @@ function ComplaintDetailPage() {
       "IN_PROGRESS",
     ].includes(complaint.status);
 
+  const canCloseComplaint =
+    isAdmin &&
+    complaint.status === "RESOLVED";
+
 
   return (
     <section className="complaint-detail-page">
+
       <div className="complaint-detail-topbar">
         <Link
           to={getBackPath(user?.role)}
@@ -340,8 +393,9 @@ function ComplaintDetailPage() {
       </div>
 
 
-      {canTakeAction && (
+      {canTakeOfficerAction && (
         <section className="complaint-action-card">
+
           <div className="complaint-action-content">
             <p className="complaint-action-eyebrow">
               OFFICER ACTION
@@ -365,6 +419,7 @@ function ComplaintDetailPage() {
             </button>
           ) : (
             <div className="complaint-action-box">
+
               <label htmlFor="action-comment">
                 Comment
                 <span>Optional</span>
@@ -398,6 +453,7 @@ function ComplaintDetailPage() {
 
 
               <div className="complaint-action-buttons">
+
                 <button
                   type="button"
                   className="complaint-action-cancel"
@@ -414,13 +470,110 @@ function ComplaintDetailPage() {
                 <button
                   type="button"
                   className="complaint-action-primary"
-                  onClick={handleAction}
+                  onClick={
+                    handleOfficerAction
+                  }
                   disabled={actionLoading}
                 >
                   {actionLoading
                     ? "Updating..."
                     : `Confirm: ${actionLabel}`}
                 </button>
+
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+
+
+      {canCloseComplaint && (
+        <section className="admin-close-card">
+
+          <div className="admin-close-content">
+            <p className="admin-close-eyebrow">
+              ADMINISTRATOR ACTION
+            </p>
+
+            <h2>Close complaint</h2>
+
+            <p>
+              This complaint has been resolved by
+              the officer. Closing it will complete
+              the complaint lifecycle.
+            </p>
+          </div>
+
+
+          {!showCloseBox ? (
+            <button
+              type="button"
+              className="admin-close-primary"
+              onClick={() => {
+                setShowCloseBox(true);
+                setActionError("");
+              }}
+            >
+              Close complaint
+            </button>
+          ) : (
+            <div className="admin-close-box">
+
+              <label htmlFor="close-comment">
+                Closing comment
+                <span>Optional</span>
+              </label>
+
+              <textarea
+                id="close-comment"
+                value={comment}
+                onChange={(event) =>
+                  setComment(event.target.value)
+                }
+                placeholder="Example: Resolution verified and complaint closed."
+                rows={4}
+                disabled={actionLoading}
+              />
+
+
+              {actionError && (
+                <p
+                  className="admin-close-error"
+                  role="alert"
+                >
+                  {actionError}
+                </p>
+              )}
+
+
+              <div className="admin-close-buttons">
+
+                <button
+                  type="button"
+                  className="admin-close-cancel"
+                  onClick={() => {
+                    setShowCloseBox(false);
+                    setComment("");
+                    setActionError("");
+                  }}
+                  disabled={actionLoading}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  className="admin-close-primary"
+                  onClick={
+                    handleCloseComplaint
+                  }
+                  disabled={actionLoading}
+                >
+                  {actionLoading
+                    ? "Closing..."
+                    : "Confirm: Close complaint"}
+                </button>
+
               </div>
             </div>
           )}
@@ -429,9 +582,11 @@ function ComplaintDetailPage() {
 
 
       <div className="complaint-detail-grid">
+
         <div className="complaint-detail-main">
 
           <article className="complaint-detail-card">
+
             <div className="complaint-detail-card-header">
               <h2>Description</h2>
             </div>
@@ -439,10 +594,12 @@ function ComplaintDetailPage() {
             <div className="complaint-description">
               {complaint.description}
             </div>
+
           </article>
 
 
           <article className="complaint-detail-card">
+
             <div className="complaint-detail-card-header">
               <h2>Status history</h2>
 
@@ -458,6 +615,7 @@ function ComplaintDetailPage() {
               </div>
             ) : (
               <div className="complaint-timeline">
+
                 {history.map(
                   (item, index) => (
                     <div
@@ -467,10 +625,13 @@ function ComplaintDetailPage() {
                         `${item.created_at}-${index}`
                       }
                     >
+
                       <div className="complaint-timeline-marker" />
 
                       <div className="complaint-timeline-content">
+
                         <div className="complaint-timeline-header">
+
                           <strong>
                             {item.new_status}
                           </strong>
@@ -480,6 +641,7 @@ function ComplaintDetailPage() {
                               item.created_at,
                             )}
                           </span>
+
                         </div>
 
                         <p>
@@ -493,12 +655,15 @@ function ComplaintDetailPage() {
                             {item.changed_by}
                           </small>
                         )}
+
                       </div>
                     </div>
                   ),
                 )}
+
               </div>
             )}
+
           </article>
 
         </div>
@@ -507,6 +672,7 @@ function ComplaintDetailPage() {
         <aside className="complaint-detail-sidebar">
 
           <article className="complaint-detail-card">
+
             <div className="complaint-detail-card-header">
               <h2>Complaint information</h2>
             </div>
@@ -515,22 +681,27 @@ function ComplaintDetailPage() {
 
               <div>
                 <dt>Category</dt>
+
                 <dd>
                   {complaint.category_name ||
                     "—"}
                 </dd>
               </div>
 
+
               <div>
                 <dt>Department</dt>
+
                 <dd>
                   {complaint.department_name ||
                     "—"}
                 </dd>
               </div>
 
+
               <div>
                 <dt>Priority</dt>
+
                 <dd>
                   <ComplaintPriorityBadge
                     priority={
@@ -540,32 +711,40 @@ function ComplaintDetailPage() {
                 </dd>
               </div>
 
+
               <div>
                 <dt>Location</dt>
+
                 <dd>
                   {complaint.location ||
                     "Not provided"}
                 </dd>
               </div>
 
+
               <div>
                 <dt>Latitude</dt>
+
                 <dd>
                   {complaint.latitude ??
                     "—"}
                 </dd>
               </div>
 
+
               <div>
                 <dt>Longitude</dt>
+
                 <dd>
                   {complaint.longitude ??
                     "—"}
                 </dd>
               </div>
 
+
               <div>
                 <dt>Last updated</dt>
+
                 <dd>
                   {formatDate(
                     complaint.updated_at,
@@ -574,9 +753,11 @@ function ComplaintDetailPage() {
               </div>
 
             </dl>
+
           </article>
 
         </aside>
+
       </div>
 
 
@@ -585,7 +766,8 @@ function ComplaintDetailPage() {
           <strong>Complaint resolved</strong>
 
           <span>
-            This complaint has been marked as resolved.
+            This complaint has been marked as resolved
+            and is waiting for administrator closure.
           </span>
         </div>
       )}
@@ -596,8 +778,8 @@ function ComplaintDetailPage() {
           <strong>Complaint closed</strong>
 
           <span>
-            This complaint has been closed by an
-            administrator.
+            This complaint has completed its
+            resolution lifecycle.
           </span>
         </div>
       )}
@@ -613,6 +795,7 @@ function ComplaintDetailPage() {
           </span>
         </div>
       )}
+
     </section>
   );
 }

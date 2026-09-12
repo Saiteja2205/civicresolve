@@ -2,8 +2,10 @@ import api from "./api";
 
 export async function getComplaints() {
   const response = await api.get("/complaints/");
+
   return response.data;
 }
+
 
 export async function getComplaint(complaintId) {
   const response = await api.get(
@@ -12,6 +14,7 @@ export async function getComplaint(complaintId) {
 
   return response.data;
 }
+
 
 export async function getComplaintHistory(
   complaintId,
@@ -23,6 +26,7 @@ export async function getComplaintHistory(
   return response.data;
 }
 
+
 export async function getCategories() {
   const response = await api.get(
     "/organizations/categories/",
@@ -30,6 +34,7 @@ export async function getCategories() {
 
   return response.data;
 }
+
 
 export async function createComplaint(
   complaintData,
@@ -41,6 +46,7 @@ export async function createComplaint(
 
   return response.data;
 }
+
 
 export async function acknowledgeComplaint(
   complaintId,
@@ -56,6 +62,7 @@ export async function acknowledgeComplaint(
   return response.data;
 }
 
+
 export async function startComplaint(
   complaintId,
   comment = "",
@@ -70,12 +77,28 @@ export async function startComplaint(
   return response.data;
 }
 
+
 export async function resolveComplaint(
   complaintId,
   comment = "",
 ) {
   const response = await api.post(
     `/complaints/${complaintId}/resolve/`,
+    comment.trim()
+      ? { comment: comment.trim() }
+      : {},
+  );
+
+  return response.data;
+}
+
+
+export async function closeComplaint(
+  complaintId,
+  comment = "",
+) {
+  const response = await api.post(
+    `/complaints/${complaintId}/close/`,
     comment.trim()
       ? { comment: comment.trim() }
       : {},
