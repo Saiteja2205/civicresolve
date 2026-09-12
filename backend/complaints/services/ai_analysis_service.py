@@ -65,6 +65,10 @@ def create_ai_analysis(complaint, ai_output=None):
     If ai_output is provided, it is used directly for testing.
 
     If ai_output is not provided, Gemini generates the analysis.
+
+    After successful validation, the AI-predicted priority is
+    applied to the complaint so downstream SLA calculation
+    uses the AI decision.
     """
 
     provider = None
@@ -123,8 +127,20 @@ def create_ai_analysis(complaint, ai_output=None):
                     if provider is not None
                     else "CivicResolve-AI-Manual-Test"
                 ),
-            },
+            }
         )
+    )
+
+    # Apply the validated AI priority to the actual complaint.
+    complaint.priority = validated_output[
+        "predicted_priority"
+    ]
+
+    complaint.save(
+        update_fields=[
+            "priority",
+            "updated_at",
+        ]
     )
 
     return analysis

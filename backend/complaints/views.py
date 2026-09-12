@@ -79,10 +79,12 @@ class ComplaintViewSet(viewsets.ModelViewSet):
         return self.queryset.filter(user=user)
 
     def perform_create(self, serializer):
-        create_complaint(
+        complaint = create_complaint(
             validated_data=serializer.validated_data,
             created_by=self.request.user,
         )
+
+        serializer.instance = complaint
 
     @action(detail=True, methods=["post"])
     @transaction.atomic
@@ -336,7 +338,12 @@ class ComplaintAssignmentViewSet(viewsets.ModelViewSet):
     serializer_class = ComplaintAssignmentSerializer
 
     def get_permissions(self):
-        if self.action in ["create", "update", "partial_update", "destroy"]:
+        if self.action in [
+            "create",
+            "update",
+            "partial_update",
+            "destroy",
+        ]:
             permission_classes = [
                 IsAuthenticated,
                 IsAdminUserRole,

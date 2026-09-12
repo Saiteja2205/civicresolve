@@ -8,24 +8,10 @@ from complaints.services.sla_service import create_complaint_sla
 
 @transaction.atomic
 def create_complaint(*, validated_data, created_by):
-    """
-    Create a complaint and run the initial CivicResolve
-    processing workflow.
-
-    Workflow:
-
-    1. Create complaint.
-    2. Record submission history.
-    3. Run AI analysis.
-    4. Automatically assign an officer.
-    5. Create the complaint SLA.
-    6. Return the fully processed complaint.
-    """
-
     complaint = Complaint.objects.create(
         **validated_data,
         user=created_by,
-        status=Complaint.Status.AI_ANALYZING,
+        status=Complaint.Status.SUBMITTED,
     )
 
     ComplaintHistory.objects.create(
@@ -33,7 +19,7 @@ def create_complaint(*, validated_data, created_by):
         changed_by=created_by,
         old_status="",
         new_status=complaint.status,
-        comment="Complaint submitted and AI analysis started.",
+        comment="Complaint submitted.",
     )
 
     run_ai_analysis(complaint)

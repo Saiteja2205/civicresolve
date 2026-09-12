@@ -1,259 +1,275 @@
 import { useState } from "react";
-import { Navigate, Route, Routes } from "react-router-dom";
+import {
+  Navigate,
+  Route,
+  Routes,
+  useNavigate,
+} from "react-router-dom";
+
+import "./App.css";
 
 import { useAuth } from "./context/AuthContext.jsx";
 import DashboardLayout from "./layouts/DashboardLayout.jsx";
+
 import AdminDashboard from "./pages/AdminDashboard.jsx";
 import CitizenDashboard from "./pages/CitizenDashboard.jsx";
+import ComplaintCreatePage from "./pages/ComplaintCreatePage.jsx";
 import ComplaintDetailPage from "./pages/ComplaintDetailPage.jsx";
 import ComplaintListPage from "./pages/ComplaintListPage.jsx";
 import LoadingScreen from "./pages/LoadingScreen.jsx";
 import OfficerDashboard from "./pages/OfficerDashboard.jsx";
-import "./App.css";
+
 
 function LoginPage() {
   const { login } = useAuth();
+  const navigate = useNavigate();
 
-  return (
-    <div className="login-page-container">
-      <section className="login-brand-panel">
-        <div className="login-brand-content">
-          <p className="login-eyebrow">
-            SMARTER GRIEVANCE MANAGEMENT
-          </p>
-
-          <h1>
-            Your complaint.
-            <br />
-            <span>Our responsibility.</span>
-          </h1>
-
-          <p className="login-description">
-            CivicResolve uses intelligent analysis to classify,
-            route, track, and resolve grievances with greater
-            transparency and accountability.
-          </p>
-
-          <div className="login-features">
-            <div>
-              <strong>01 &nbsp; Submit</strong>
-              <span>Describe your issue in your own words.</span>
-            </div>
-
-            <div>
-              <strong>02 &nbsp; Track</strong>
-              <span>
-                Follow your complaint from submission to resolution.
-              </span>
-            </div>
-
-            <div>
-              <strong>03 &nbsp; Resolve</strong>
-              <span>
-                Get routed to the right department and officer.
-              </span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="login-form-panel">
-        <LoginForm login={login} />
-      </section>
-    </div>
-  );
-}
-
-function LoginForm({ login }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (event) => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSubmit(event) {
     event.preventDefault();
 
+    setLoading(true);
     setError("");
 
-    if (!email.trim()) {
-      setError("Please enter your email address.");
-      return;
-    }
-
-    if (!password) {
-      setError("Please enter your password.");
-      return;
-    }
-
     try {
-      setIsLoading(true);
+      const loginData = await login(
+        email,
+        password,
+      );
 
-      await login(email.trim(), password);
-    } catch (err) {
-      const detail = err.response?.data?.detail;
+      const loggedInUser = loginData.user;
 
-      if (detail) {
-        setError(detail);
-      } else if (err.response?.status === 401) {
-        setError("Invalid email or password.");
+      if (loggedInUser?.role === "ADMIN") {
+        navigate("/dashboard/admin", {
+          replace: true,
+        });
+      } else if (
+        loggedInUser?.role === "OFFICER"
+      ) {
+        navigate("/dashboard/officer", {
+          replace: true,
+        });
       } else {
-        setError(
-          "Unable to connect to CivicResolve. Please try again.",
-        );
+        navigate("/dashboard/citizen", {
+          replace: true,
+        });
       }
+    } catch (loginError) {
+      console.error(
+        "Login failed:",
+        loginError,
+      );
+
+      const detail =
+        loginError?.response?.data?.detail;
+
+      setError(
+        detail ||
+          "Login failed. Please check your email and password.",
+      );
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  };
+  }
 
   return (
-    <div className="login-card">
-      <div className="login-card-header">
-        <div className="login-logo">C</div>
+    <main className="login-page">
+      <section className="login-card">
+        <div className="login-brand">
+          <span className="login-brand-mark">
+            CR
+          </span>
 
-        <p className="login-eyebrow">ACCOUNT ACCESS</p>
+          <div>
+            <p className="login-brand-name">
+              CivicResolve
+            </p>
 
-        <h2>Welcome back</h2>
+            <p className="login-brand-tagline">
+              Intelligent grievance resolution
+            </p>
+          </div>
+        </div>
 
-        <p>
-          Sign in to access your CivicResolve workspace.
-        </p>
-      </div>
+        <div className="login-heading">
+          <p className="login-eyebrow">
+            SECURE ACCESS
+          </p>
 
-      <form onSubmit={handleSubmit} className="login-form">
-        <div className="login-field">
-          <label htmlFor="email">Email address</label>
+          <h1>Welcome back</h1>
+
+          <p>
+            Sign in to access your CivicResolve
+            workspace.
+          </p>
+        </div>
+
+        <form
+          className="login-form"
+          onSubmit={handleSubmit}
+        >
+          <label htmlFor="email">
+            Email
+          </label>
 
           <input
             id="email"
             type="email"
-            autoComplete="email"
-            placeholder="you@example.com"
             value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            disabled={isLoading}
+            onChange={(event) =>
+              setEmail(event.target.value)
+            }
+            placeholder="you@example.com"
+            autoComplete="email"
+            required
           />
-        </div>
 
-        <div className="login-field">
-          <label htmlFor="password">Password</label>
+          <label htmlFor="password">
+            Password
+          </label>
 
-          <div className="password-wrapper">
-            <input
-              id="password"
-              type={showPassword ? "text" : "password"}
-              autoComplete="current-password"
-              placeholder="Enter your password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              disabled={isLoading}
-            />
+          <input
+            id="password"
+            type="password"
+            value={password}
+            onChange={(event) =>
+              setPassword(event.target.value)
+            }
+            placeholder="Enter your password"
+            autoComplete="current-password"
+            required
+          />
 
-            <button
-              type="button"
-              className="password-toggle"
-              onClick={() =>
-                setShowPassword((current) => !current)
-              }
-              disabled={isLoading}
-            >
-              {showPassword ? "Hide" : "Show"}
-            </button>
-          </div>
-        </div>
+          {error && (
+            <p className="login-error">
+              {error}
+            </p>
+          )}
 
-        {error && (
-          <div className="login-error" role="alert">
-            <span>!</span>
-            {error}
-          </div>
-        )}
-
-        <button
-          type="submit"
-          className="login-submit"
-          disabled={isLoading}
-        >
-          {isLoading ? "Signing in..." : "Sign in"}
-        </button>
-      </form>
-
-      <div className="login-security">
-        Secure JWT-authenticated session
-      </div>
-    </div>
+          <button
+            type="submit"
+            className="login-submit"
+            disabled={loading}
+          >
+            {loading
+              ? "Signing in..."
+              : "Sign in"}
+          </button>
+        </form>
+      </section>
+    </main>
   );
 }
 
+
 function ProtectedRoute({ children }) {
-  const { isAuthenticated, isLoadingUser } = useAuth();
+  const {
+    isAuthenticated,
+    isLoadingUser,
+  } = useAuth();
 
   if (isLoadingUser) {
     return <LoadingScreen />;
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return (
+      <Navigate
+        to="/login"
+        replace
+      />
+    );
   }
 
   return children;
 }
 
-function RoleRoute({ allowedRoles, children }) {
-  const { user } = useAuth();
 
-  if (!user || !allowedRoles.includes(user.role)) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  return children;
-}
-
-function DashboardRedirect() {
-  const { user } = useAuth();
-
-  if (user?.role === "USER") {
-    return <CitizenDashboard />;
-  }
-
-  if (user?.role === "OFFICER") {
-    return <OfficerDashboard />;
-  }
-
-  if (user?.role === "ADMIN") {
-    return <AdminDashboard />;
-  }
-
-  return (
-    <div className="dashboard-unknown-role">
-      <h1>Account configuration error</h1>
-
-      <p>
-        Your account has an unsupported CivicResolve role.
-      </p>
-    </div>
-  );
-}
-
-function App() {
-  const { isAuthenticated, isLoadingUser } = useAuth();
+function RoleRoute({
+  allowedRoles,
+  children,
+}) {
+  const {
+    user,
+    isLoadingUser,
+  } = useAuth();
 
   if (isLoadingUser) {
     return <LoadingScreen />;
   }
 
+  if (!user) {
+    return (
+      <Navigate
+        to="/login"
+        replace
+      />
+    );
+  }
+
+  if (!allowedRoles.includes(user.role)) {
+    return (
+      <Navigate
+        to="/dashboard"
+        replace
+      />
+    );
+  }
+
+  return children;
+}
+
+
+function DashboardRedirect() {
+  const { user } = useAuth();
+
+  if (!user) {
+    return (
+      <Navigate
+        to="/login"
+        replace
+      />
+    );
+  }
+
+  if (user.role === "ADMIN") {
+    return (
+      <Navigate
+        to="/dashboard/admin"
+        replace
+      />
+    );
+  }
+
+  if (user.role === "OFFICER") {
+    return (
+      <Navigate
+        to="/dashboard/officer"
+        replace
+      />
+    );
+  }
+
+  return (
+    <Navigate
+      to="/dashboard/citizen"
+      replace
+    />
+  );
+}
+
+
+function App() {
   return (
     <Routes>
       <Route
         path="/login"
-        element={
-          isAuthenticated ? (
-            <Navigate to="/dashboard" replace />
-          ) : (
-            <LoginPage />
-          )
-        }
+        element={<LoginPage />}
       />
 
       <Route
@@ -264,13 +280,66 @@ function App() {
           </ProtectedRoute>
         }
       >
-        <Route index element={<DashboardRedirect />} />
+        <Route
+          index
+          element={<DashboardRedirect />}
+        />
+
+        <Route
+          path="citizen"
+          element={
+            <RoleRoute
+              allowedRoles={["USER"]}
+            >
+              <CitizenDashboard />
+            </RoleRoute>
+          }
+        />
+
+        <Route
+          path="officer"
+          element={
+            <RoleRoute
+              allowedRoles={["OFFICER"]}
+            >
+              <OfficerDashboard />
+            </RoleRoute>
+          }
+        />
+
+        <Route
+          path="admin"
+          element={
+            <RoleRoute
+              allowedRoles={["ADMIN"]}
+            >
+              <AdminDashboard />
+            </RoleRoute>
+          }
+        />
 
         <Route
           path="complaints"
           element={
-            <RoleRoute allowedRoles={["USER", "ADMIN"]}>
+            <RoleRoute
+              allowedRoles={[
+                "USER",
+                "OFFICER",
+                "ADMIN",
+              ]}
+            >
               <ComplaintListPage />
+            </RoleRoute>
+          }
+        />
+
+        <Route
+          path="complaints/new"
+          element={
+            <RoleRoute
+              allowedRoles={["USER"]}
+            >
+              <ComplaintCreatePage />
             </RoleRoute>
           }
         />
@@ -278,7 +347,12 @@ function App() {
         <Route
           path="complaints/:complaintId"
           element={
-            <RoleRoute allowedRoles={["USER", "ADMIN"]}>
+            <RoleRoute
+              allowedRoles={[
+                "USER",
+                "ADMIN",
+              ]}
+            >
               <ComplaintDetailPage />
             </RoleRoute>
           }
@@ -287,7 +361,9 @@ function App() {
         <Route
           path="assigned"
           element={
-            <RoleRoute allowedRoles={["OFFICER"]}>
+            <RoleRoute
+              allowedRoles={["OFFICER"]}
+            >
               <ComplaintListPage />
             </RoleRoute>
           }
@@ -296,17 +372,10 @@ function App() {
         <Route
           path="assigned/:complaintId"
           element={
-            <RoleRoute allowedRoles={["OFFICER"]}>
+            <RoleRoute
+              allowedRoles={["OFFICER"]}
+            >
               <ComplaintDetailPage />
-            </RoleRoute>
-          }
-        />
-
-        <Route
-          path="assignments"
-          element={
-            <RoleRoute allowedRoles={["ADMIN"]}>
-              <AdminDashboard />
             </RoleRoute>
           }
         />
@@ -316,7 +385,7 @@ function App() {
         path="/"
         element={
           <Navigate
-            to={isAuthenticated ? "/dashboard" : "/login"}
+            to="/dashboard"
             replace
           />
         }
@@ -326,7 +395,7 @@ function App() {
         path="*"
         element={
           <Navigate
-            to={isAuthenticated ? "/dashboard" : "/login"}
+            to="/dashboard"
             replace
           />
         }

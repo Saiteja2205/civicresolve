@@ -1,7 +1,9 @@
 import { Link } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext.jsx";
+
 import "../styles/dashboard-pages.css";
+
 
 function CitizenDashboard() {
   const { user } = useAuth();
@@ -22,53 +24,90 @@ function CitizenDashboard() {
         </div>
 
         <Link
-          to="/dashboard/complaints"
+          to="/dashboard/complaints/new"
           className="dashboard-primary-action"
         >
-          View my complaints
+          Submit a complaint
         </Link>
       </div>
 
-      <div className="dashboard-stat-grid">
-        <div className="dashboard-stat-card">
-          <span>My complaints</span>
-          <strong>Live</strong>
-          <small>
-            Open the complaints workspace
-          </small>
-        </div>
+      <div className="dashboard-card-grid">
+        <article className="dashboard-stat-card">
+          <span className="dashboard-stat-label">
+            My complaints
+          </span>
 
-        <div className="dashboard-stat-card">
-          <span>Tracking</span>
-          <strong>Live</strong>
-          <small>
-            View complaint status history
-          </small>
-        </div>
+          <strong className="dashboard-stat-value">
+            —
+          </strong>
 
-        <div className="dashboard-stat-card">
-          <span>Resolution</span>
-          <strong>Live</strong>
-          <small>
-            Follow your grievance journey
-          </small>
-        </div>
+          <span className="dashboard-stat-note">
+            View your complaint history
+          </span>
+        </article>
+
+        <article className="dashboard-stat-card">
+          <span className="dashboard-stat-label">
+            Active complaints
+          </span>
+
+          <strong className="dashboard-stat-value">
+            —
+          </strong>
+
+          <span className="dashboard-stat-note">
+            Complaints currently being handled
+          </span>
+        </article>
+
+        <article className="dashboard-stat-card">
+          <span className="dashboard-stat-label">
+            Resolved
+          </span>
+
+          <strong className="dashboard-stat-value">
+            —
+          </strong>
+
+          <span className="dashboard-stat-note">
+            Successfully resolved complaints
+          </span>
+        </article>
       </div>
 
-      <div className="dashboard-info-card">
-        <p className="dashboard-eyebrow">
-          COMPLAINT TRACKING
-        </p>
+      <div className="dashboard-content-card">
+        <div>
+          <p className="dashboard-card-eyebrow">
+            COMPLAINT TRACKING
+          </p>
 
-        <h2>
-          Your grievance journey is now visible.
-        </h2>
+          <h2>
+            Need to report an issue?
+          </h2>
 
-        <p>
-          Open My complaints to see your submitted
-          grievances, current status, priority,
-          department routing, and complete status history.
-        </p>
+          <p>
+            Submit a complaint and CivicResolve will
+            analyze the issue, identify the appropriate
+            department, assign an officer, and track
+            the resolution process.
+          </p>
+        </div>
+
+        <div className="dashboard-action-row">
+          <Link
+            to="/dashboard/complaints/new"
+            className="dashboard-primary-action"
+          >
+            Submit a complaint
+          </Link>
+
+          <Link
+            to="/dashboard/complaints"
+            className="dashboard-secondary-action"
+          >
+            View my complaints
+          </Link>
+        </div>
       </div>
     </section>
   );

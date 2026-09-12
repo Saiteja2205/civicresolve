@@ -21,6 +21,11 @@ urlpatterns = [
     ),
 
     path(
+        "api/organizations/",
+        include("organizations.urls"),
+    ),
+
+    path(
         "api/auth/token/",
         TokenObtainPairView.as_view(),
         name="token_obtain_pair",

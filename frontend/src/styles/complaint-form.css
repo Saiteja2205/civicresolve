@@ -1,0 +1,257 @@
+.complaint-form-page {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+.complaint-form-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+.complaint-form-header h1 {
+  margin: 6px 0 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+}
+
+.complaint-form-header p {
+  margin: 0;
+  max-width: 680px;
+  color: #667085;
+  line-height: 1.6;
+}
+
+.complaint-form-card {
+  background: #ffffff;
+  border: 1px solid #e4e7ec;
+  border-radius: 20px;
+  padding: 32px;
+  box-shadow: 0 12px 40px rgba(16, 24, 40, 0.06);
+}
+
+.complaint-form-intro {
+  margin-bottom: 28px;
+}
+
+.complaint-form-intro h2 {
+  margin: 0 0 6px;
+  font-size: 1.35rem;
+}
+
+.complaint-form-intro p {
+  margin: 0;
+  color: #667085;
+  line-height: 1.6;
+}
+
+.complaint-form-error {
+  margin-bottom: 22px;
+  padding: 13px 15px;
+  border: 1px solid #fecdca;
+  border-radius: 10px;
+  background: #fef3f2;
+  color: #b42318;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.complaint-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+}
+
+.complaint-field {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.complaint-field-full {
+  grid-column: 1 / -1;
+}
+
+.complaint-field label {
+  margin-bottom: 8px;
+  color: #344054;
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+.complaint-field input,
+.complaint-field select,
+.complaint-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #d0d5dd;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #101828;
+  font: inherit;
+  outline: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.complaint-field input,
+.complaint-field select {
+  min-height: 46px;
+  padding: 0 13px;
+}
+
+.complaint-field textarea {
+  min-height: 150px;
+  padding: 12px 13px;
+  resize: vertical;
+  line-height: 1.55;
+}
+
+.complaint-field input:focus,
+.complaint-field select:focus,
+.complaint-field textarea:focus {
+  border-color: #7f56d9;
+  box-shadow: 0 0 0 3px rgba(127, 86, 217, 0.12);
+}
+
+.complaint-field input:disabled,
+.complaint-field select:disabled,
+.complaint-field textarea:disabled {
+  cursor: not-allowed;
+  background: #f9fafb;
+}
+
+.complaint-field-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 7px;
+  color: #98a2b3;
+  font-size: 0.78rem;
+}
+
+.complaint-field-error {
+  margin: 7px 0 0;
+  color: #b42318;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.complaint-form-section {
+  grid-column: 1 / -1;
+  padding-top: 6px;
+  border-top: 1px solid #eaecf0;
+}
+
+.complaint-form-section h3 {
+  margin: 0 0 5px;
+  font-size: 1rem;
+}
+
+.complaint-form-section > div:first-child p {
+  margin: 0 0 18px;
+  color: #667085;
+  font-size: 0.88rem;
+}
+
+.complaint-coordinate-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.complaint-form-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  margin-top: 30px;
+  padding-top: 22px;
+  border-top: 1px solid #eaecf0;
+}
+
+.complaint-secondary-action,
+.complaint-cancel-action,
+.complaint-submit-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 17px;
+  border-radius: 10px;
+  font: inherit;
+  font-weight: 650;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
+}
+
+.complaint-secondary-action,
+.complaint-cancel-action {
+  border: 1px solid #d0d5dd;
+  background: #ffffff;
+  color: #344054;
+}
+
+.complaint-submit-action {
+  border: 1px solid #7f56d9;
+  background: #7f56d9;
+  color: #ffffff;
+}
+
+.complaint-secondary-action:hover,
+.complaint-cancel-action:hover,
+.complaint-submit-action:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.complaint-submit-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+@media (max-width: 760px) {
+  .complaint-form-header {
+    flex-direction: column;
+  }
+
+  .complaint-form-card {
+    padding: 22px;
+    border-radius: 16px;
+  }
+
+  .complaint-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .complaint-field-full {
+    grid-column: auto;
+  }
+
+  .complaint-form-section {
+    grid-column: auto;
+  }
+
+  .complaint-coordinate-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .complaint-form-footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .complaint-secondary-action,
+  .complaint-cancel-action,
+  .complaint-submit-action {
+    width: 100%;
+  }
+}

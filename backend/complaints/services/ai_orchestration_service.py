@@ -16,10 +16,11 @@ def run_ai_analysis(complaint):
     the analysis is being generated.
 
     If AI succeeds, the analysis is saved and the
-    complaint is moved back to SUBMITTED.
+    complaint remains in AI_ANALYZING so that the
+    automatic routing and assignment workflow can
+    continue.
 
-    If AI fails, the complaint remains submitted
-    and the error is returned to the caller.
+    If AI fails, the complaint is returned to SUBMITTED.
     """
 
     change_complaint_status(
@@ -48,12 +49,6 @@ def run_ai_analysis(complaint):
             "analysis": None,
             "error": str(exc),
         }
-
-    change_complaint_status(
-        complaint=complaint,
-        new_status=Complaint.Status.SUBMITTED,
-        comment="AI complaint analysis completed.",
-    )
 
     return {
         "success": True,
