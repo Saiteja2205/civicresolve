@@ -1,0 +1,214 @@
+.admin-assignment-card {
+  margin-bottom: 24px;
+  padding: 24px;
+  border: 1px solid #e4e7ec;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow:
+    0 6px 24px
+    rgba(16, 24, 40, 0.04);
+}
+
+
+.admin-assignment-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+
+.admin-assignment-eyebrow {
+  margin: 0 0 7px;
+  color: #6941c6;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+
+.admin-assignment-header h2 {
+  margin: 0 0 7px;
+  color: #101828;
+  font-size: 1.15rem;
+}
+
+
+.admin-assignment-header p {
+  max-width: 680px;
+  margin: 0;
+  color: #667085;
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
+
+.admin-assignment-primary {
+  min-height: 44px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 10px;
+  background: #6941c6;
+  color: #ffffff;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+
+.admin-assignment-primary:hover:not(:disabled) {
+  background: #5b36a8;
+}
+
+
+.admin-assignment-primary:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+
+.admin-current-assignment {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 20px;
+  padding: 15px 17px;
+  border: 1px solid #eaecf0;
+  border-radius: 11px;
+  background: #f9fafb;
+}
+
+
+.admin-current-assignment span {
+  color: #667085;
+  font-size: 0.74rem;
+}
+
+
+.admin-current-assignment strong {
+  color: #344054;
+  font-size: 0.88rem;
+}
+
+
+.admin-current-assignment small {
+  color: #98a2b3;
+  font-size: 0.76rem;
+}
+
+
+.admin-assignment-form {
+  display: grid;
+  grid-template-columns:
+    minmax(220px, 1fr)
+    minmax(220px, 1fr);
+  gap: 16px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #eaecf0;
+}
+
+
+.admin-assignment-field label {
+  display: block;
+  margin-bottom: 7px;
+  color: #344054;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+
+.admin-assignment-field select {
+  width: 100%;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 0 12px;
+  border: 1px solid #d0d5dd;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #344054;
+  font: inherit;
+  font-size: 0.82rem;
+  outline: none;
+}
+
+
+.admin-assignment-field select:focus {
+  border-color: #7f56d9;
+  box-shadow:
+    0 0 0 3px
+    rgba(127, 86, 217, 0.1);
+}
+
+
+.admin-assignment-field select:disabled {
+  background: #f2f4f7;
+  color: #98a2b3;
+  cursor: not-allowed;
+}
+
+
+.admin-assignment-error {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #b42318;
+  font-size: 0.8rem;
+}
+
+
+.admin-assignment-buttons {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+
+.admin-assignment-cancel {
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid #d0d5dd;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #344054;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+
+.admin-assignment-cancel:hover:not(:disabled) {
+  background: #f9fafb;
+}
+
+
+.admin-assignment-cancel:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+
+@media (max-width: 760px) {
+  .admin-assignment-header {
+    flex-direction: column;
+  }
+
+  .admin-assignment-primary {
+    width: 100%;
+  }
+
+  .admin-assignment-form {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-assignment-buttons {
+    flex-direction: column-reverse;
+  }
+
+  .admin-assignment-buttons button {
+    width: 100%;
+  }
+}

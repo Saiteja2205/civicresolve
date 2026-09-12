@@ -1,13 +1,18 @@
 import api from "./api";
 
+
 export async function getComplaints() {
-  const response = await api.get("/complaints/");
+  const response = await api.get(
+    "/complaints/",
+  );
 
   return response.data;
 }
 
 
-export async function getComplaint(complaintId) {
+export async function getComplaint(
+  complaintId,
+) {
   const response = await api.get(
     `/complaints/${complaintId}/`,
   );
@@ -27,9 +32,44 @@ export async function getComplaintHistory(
 }
 
 
+export async function getComplaintAssignments(
+  complaintId,
+) {
+  const response = await api.get(
+    `/assignments/?complaint=${complaintId}`,
+  );
+
+  return response.data;
+}
+
+
 export async function getCategories() {
   const response = await api.get(
     "/organizations/categories/",
+  );
+
+  return response.data;
+}
+
+
+export async function getDepartments() {
+  const response = await api.get(
+    "/organizations/departments/",
+  );
+
+  return response.data;
+}
+
+
+export async function getOfficers(
+  departmentId = "",
+) {
+  const endpoint = departmentId
+    ? `/organizations/officers/?department=${departmentId}`
+    : "/organizations/officers/";
+
+  const response = await api.get(
+    endpoint,
   );
 
   return response.data;
@@ -42,6 +82,19 @@ export async function createComplaint(
   const response = await api.post(
     "/complaints/",
     complaintData,
+  );
+
+  return response.data;
+}
+
+
+export async function assignComplaint(
+  complaintId,
+  assignmentData,
+) {
+  const response = await api.post(
+    `/complaints/${complaintId}/assign/`,
+    assignmentData,
   );
 
   return response.data;

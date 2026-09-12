@@ -26,7 +26,6 @@ class ComplaintSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Complaint
-
         fields = [
             "id",
             "ticket_number",
@@ -124,7 +123,9 @@ class ComplaintSerializer(serializers.ModelSerializer):
         return value
 
 
-class ComplaintAnalysisSerializer(serializers.ModelSerializer):
+class ComplaintAnalysisSerializer(
+    serializers.ModelSerializer
+):
     complaint_ticket_number = serializers.CharField(
         source="complaint.ticket_number",
         read_only=True,
@@ -142,7 +143,6 @@ class ComplaintAnalysisSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ComplaintAnalysis
-
         fields = [
             "id",
             "complaint",
@@ -192,7 +192,23 @@ class ComplaintAnalysisSerializer(serializers.ModelSerializer):
         return value
 
 
-class ComplaintAssignmentSerializer(serializers.ModelSerializer):
+class ComplaintAssignmentSerializer(
+    serializers.ModelSerializer
+):
+    officer_email = serializers.EmailField(
+        source="officer.email",
+        read_only=True,
+    )
+
+    department_name = serializers.CharField(
+        source="department.name",
+        read_only=True,
+    )
+
+    assigned_by_email = serializers.EmailField(
+        source="assigned_by.email",
+        read_only=True,
+    )
 
     class Meta:
         model = ComplaintAssignment
@@ -201,8 +217,11 @@ class ComplaintAssignmentSerializer(serializers.ModelSerializer):
             "id",
             "complaint",
             "department",
+            "department_name",
             "officer",
+            "officer_email",
             "assigned_by",
+            "assigned_by_email",
             "assigned_at",
             "unassigned_at",
             "reason",
@@ -211,11 +230,16 @@ class ComplaintAssignmentSerializer(serializers.ModelSerializer):
         read_only_fields = [
             "id",
             "assigned_by",
+            "assigned_by_email",
             "assigned_at",
+            "officer_email",
+            "department_name",
         ]
 
 
-class ComplaintHistorySerializer(serializers.ModelSerializer):
+class ComplaintHistorySerializer(
+    serializers.ModelSerializer
+):
     changed_by_email = serializers.EmailField(
         source="changed_by.email",
         read_only=True,

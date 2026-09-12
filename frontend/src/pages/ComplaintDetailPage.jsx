@@ -1,13 +1,17 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext.jsx";
 
 import {
   acknowledgeComplaint,
+  assignComplaint,
   closeComplaint,
   getComplaint,
+  getComplaintAssignments,
   getComplaintHistory,
+  getDepartments,
+  getOfficers,
   resolveComplaint,
   startComplaint,
 } from "../services/complaintService.js";
@@ -18,6 +22,7 @@ import ComplaintStatusBadge from "../components/ComplaintStatusBadge.jsx";
 import "../styles/complaints.css";
 import "../styles/complaint-actions.css";
 import "../styles/admin-actions.css";
+import "../styles/admin-assignment.css";
 
 
 function getBackPath(role) {
@@ -109,26 +114,80 @@ function getApiErrorMessage(requestError) {
 }
 
 
+function getList(data) {
+  if (Array.isArray(data)) {
+    return data;
+  }
+
+  if (Array.isArray(data?.results)) {
+    return data.results;
+  }
+
+  return [];
+}
+
+
 function ComplaintDetailPage() {
   const { complaintId } = useParams();
   const { user } = useAuth();
-  const navigate = useNavigate();
 
-  const [complaint, setComplaint] = useState(null);
-  const [history, setHistory] = useState([]);
+  const [complaint, setComplaint] =
+    useState(null);
 
-  const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState(false);
+  const [history, setHistory] =
+    useState([]);
 
-  const [error, setError] = useState("");
-  const [actionError, setActionError] = useState("");
+  const [assignments, setAssignments] =
+    useState([]);
 
-  const [comment, setComment] = useState("");
+  const [departments, setDepartments] =
+    useState([]);
+
+  const [officers, setOfficers] =
+    useState([]);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [actionLoading, setActionLoading] =
+    useState(false);
+
+  const [assignmentLoading, setAssignmentLoading] =
+    useState(false);
+
+  const [error, setError] =
+    useState("");
+
+  const [actionError, setActionError] =
+    useState("");
+
+  const [assignmentError, setAssignmentError] =
+    useState("");
+
+  const [comment, setComment] =
+    useState("");
+
   const [showActionBox, setShowActionBox] =
     useState(false);
 
   const [showCloseBox, setShowCloseBox] =
     useState(false);
+
+  const [showAssignmentBox, setShowAssignmentBox] =
+    useState(false);
+
+  const [selectedDepartment, setSelectedDepartment] =
+    useState("");
+
+  const [selectedOfficer, setSelectedOfficer] =
+    useState("");
+
+
+  const isOfficer =
+    user?.role === "OFFICER";
+
+  const isAdmin =
+    user?.role === "ADMIN";
 
 
   async function loadComplaint() {
@@ -136,19 +195,39 @@ function ComplaintDetailPage() {
       setLoading(true);
       setError("");
 
-      const [complaintData, historyData] =
-        await Promise.all([
-          getComplaint(complaintId),
-          getComplaintHistory(complaintId),
-        ]);
+      const [
+        complaintData,
+        historyData,
+      ] = await Promise.all([
+        getComplaint(complaintId),
+        getComplaintHistory(complaintId),
+      ]);
 
       setComplaint(complaintData);
 
       setHistory(
-        Array.isArray(historyData)
-          ? historyData
-          : historyData?.results || [],
+        getList(historyData),
       );
+
+      if (user?.role === "ADMIN") {
+        const [
+          assignmentData,
+          departmentData,
+        ] = await Promise.all([
+          getComplaintAssignments(
+            complaintId,
+          ),
+          getDepartments(),
+        ]);
+
+        setAssignments(
+          getList(assignmentData),
+        );
+
+        setDepartments(
+          getList(departmentData),
+        );
+      }
     } catch (requestError) {
       console.error(
         "Failed to load complaint:",
@@ -166,23 +245,151 @@ function ComplaintDetailPage() {
 
   useEffect(() => {
     loadComplaint();
-  }, [complaintId]);
+  }, [
+    complaintId,
+    user?.role,
+  ]);
 
 
   async function refreshComplaintData(id) {
-    const [updatedComplaint, updatedHistory] =
-      await Promise.all([
-        getComplaint(id),
-        getComplaintHistory(id),
-      ]);
+    const [
+      updatedComplaint,
+      updatedHistory,
+    ] = await Promise.all([
+      getComplaint(id),
+      getComplaintHistory(id),
+    ]);
 
     setComplaint(updatedComplaint);
 
     setHistory(
-      Array.isArray(updatedHistory)
-        ? updatedHistory
-        : updatedHistory?.results || [],
+      getList(updatedHistory),
     );
+
+    if (user?.role === "ADMIN") {
+      const assignmentData =
+        await getComplaintAssignments(id);
+
+      setAssignments(
+        getList(assignmentData),
+      );
+    }
+  }
+
+
+  async function loadOfficers(
+    departmentId,
+  ) {
+    if (!departmentId) {
+      setOfficers([]);
+      setSelectedOfficer("");
+      return;
+    }
+
+    try {
+      const data =
+        await getOfficers(
+          departmentId,
+        );
+
+      setOfficers(
+        getList(data),
+      );
+
+      setSelectedOfficer("");
+    } catch (requestError) {
+      console.error(
+        "Failed to load officers:",
+        requestError,
+      );
+
+      setAssignmentError(
+        "Unable to load officers for this department.",
+      );
+
+      setOfficers([]);
+    }
+  }
+
+
+  function handleDepartmentChange(
+    event,
+  ) {
+    const departmentId =
+      event.target.value;
+
+    setSelectedDepartment(
+      departmentId,
+    );
+
+    setAssignmentError("");
+
+    loadOfficers(
+      departmentId,
+    );
+  }
+
+
+  async function handleAssignment() {
+    if (!complaint?.id) {
+      setAssignmentError(
+        "Complaint ID is missing. Please reload the page.",
+      );
+      return;
+    }
+
+    if (!selectedDepartment) {
+      setAssignmentError(
+        "Please select a department.",
+      );
+      return;
+    }
+
+    if (!selectedOfficer) {
+      setAssignmentError(
+        "Please select an officer.",
+      );
+      return;
+    }
+
+    setAssignmentLoading(true);
+    setAssignmentError("");
+
+    try {
+      await assignComplaint(
+        complaint.id,
+        {
+          officer_id:
+            Number(selectedOfficer),
+          department_id:
+            Number(selectedDepartment),
+          reason:
+            "Officer selected by administrator.",
+        },
+      );
+
+      await refreshComplaintData(
+        complaint.id,
+      );
+
+      setShowAssignmentBox(false);
+      setSelectedDepartment("");
+      setSelectedOfficer("");
+      setOfficers([]);
+    } catch (requestError) {
+      console.error(
+        "Complaint assignment failed:",
+        requestError,
+      );
+
+      setAssignmentError(
+        getApiErrorMessage(
+          requestError,
+        ),
+      );
+    } finally {
+      setAssignmentLoading(false);
+    }
   }
 
 
@@ -234,7 +441,9 @@ function ComplaintDetailPage() {
       );
 
       setActionError(
-        getApiErrorMessage(requestError),
+        getApiErrorMessage(
+          requestError,
+        ),
       );
     } finally {
       setActionLoading(false);
@@ -279,7 +488,9 @@ function ComplaintDetailPage() {
       );
 
       setActionError(
-        getApiErrorMessage(requestError),
+        getApiErrorMessage(
+          requestError,
+        ),
       );
     } finally {
       setActionLoading(false);
@@ -310,7 +521,9 @@ function ComplaintDetailPage() {
           </p>
 
           <Link
-            to={getBackPath(user?.role)}
+            to={getBackPath(
+              user?.role,
+            )}
             className="complaint-back-link"
           >
             Back to complaints
@@ -321,14 +534,10 @@ function ComplaintDetailPage() {
   }
 
 
-  const isOfficer =
-    user?.role === "OFFICER";
-
-  const isAdmin =
-    user?.role === "ADMIN";
-
   const actionLabel =
-    getActionLabel(complaint.status);
+    getActionLabel(
+      complaint.status,
+    );
 
   const actionDescription =
     getActionDescription(
@@ -341,11 +550,31 @@ function ComplaintDetailPage() {
       "ASSIGNED",
       "ACKNOWLEDGED",
       "IN_PROGRESS",
-    ].includes(complaint.status);
+    ].includes(
+      complaint.status,
+    );
 
   const canCloseComplaint =
     isAdmin &&
-    complaint.status === "RESOLVED";
+    complaint.status ===
+      "RESOLVED";
+
+  const canManageAssignment =
+    isAdmin &&
+    [
+      "SUBMITTED",
+      "AI_ANALYZING",
+      "REOPENED",
+      "ASSIGNED",
+    ].includes(
+      complaint.status,
+    );
+
+  const activeAssignment =
+    assignments.find(
+      (assignment) =>
+        !assignment.unassigned_at,
+    );
 
 
   return (
@@ -353,7 +582,9 @@ function ComplaintDetailPage() {
 
       <div className="complaint-detail-topbar">
         <Link
-          to={getBackPath(user?.role)}
+          to={getBackPath(
+            user?.role,
+          )}
           className="complaint-back-link"
         >
           ← Back
@@ -362,6 +593,7 @@ function ComplaintDetailPage() {
 
 
       <div className="complaint-detail-header">
+
         <div>
           <p className="complaint-detail-eyebrow">
             COMPLAINT
@@ -371,7 +603,9 @@ function ComplaintDetailPage() {
             {complaint.ticket_number}
           </div>
 
-          <h1>{complaint.title}</h1>
+          <h1>
+            {complaint.title}
+          </h1>
 
           <p className="complaint-detail-submitted">
             Submitted{" "}
@@ -381,29 +615,267 @@ function ComplaintDetailPage() {
           </p>
         </div>
 
+
         <div className="complaint-detail-badges">
+
           <ComplaintStatusBadge
-            status={complaint.status}
+            status={
+              complaint.status
+            }
           />
 
           <ComplaintPriorityBadge
-            priority={complaint.priority}
+            priority={
+              complaint.priority
+            }
           />
+
         </div>
+
       </div>
+
+
+      {canManageAssignment && (
+        <section className="admin-assignment-card">
+
+          <div className="admin-assignment-header">
+
+            <div>
+              <p className="admin-assignment-eyebrow">
+                ADMINISTRATOR CONTROL
+              </p>
+
+              <h2>
+                Officer assignment
+              </h2>
+
+              <p>
+                Review the current officer and
+                assign the complaint to another
+                active officer when necessary.
+              </p>
+            </div>
+
+
+            {!showAssignmentBox && (
+              <button
+                type="button"
+                className="admin-assignment-primary"
+                onClick={() => {
+                  setShowAssignmentBox(
+                    true,
+                  );
+                  setAssignmentError(
+                    "",
+                  );
+                }}
+              >
+                {activeAssignment
+                  ? "Reassign officer"
+                  : "Assign officer"}
+              </button>
+            )}
+
+          </div>
+
+
+          {activeAssignment && (
+            <div className="admin-current-assignment">
+
+              <span>
+                Currently assigned to
+              </span>
+
+              <strong>
+                {activeAssignment.officer_email ||
+                  `Officer #${activeAssignment.officer}`}
+              </strong>
+
+              <small>
+                {activeAssignment.department_name ||
+                  "Department unavailable"}
+              </small>
+
+            </div>
+          )}
+
+
+          {showAssignmentBox && (
+            <div className="admin-assignment-form">
+
+              <div className="admin-assignment-field">
+
+                <label htmlFor="assignment-department">
+                  Department
+                </label>
+
+                <select
+                  id="assignment-department"
+                  value={
+                    selectedDepartment
+                  }
+                  onChange={
+                    handleDepartmentChange
+                  }
+                  disabled={
+                    assignmentLoading
+                  }
+                >
+                  <option value="">
+                    Select department
+                  </option>
+
+                  {departments.map(
+                    (department) => (
+                      <option
+                        key={
+                          department.id
+                        }
+                        value={
+                          department.id
+                        }
+                      >
+                        {department.name}
+                      </option>
+                    ),
+                  )}
+
+                </select>
+
+              </div>
+
+
+              <div className="admin-assignment-field">
+
+                <label htmlFor="assignment-officer">
+                  Officer
+                </label>
+
+                <select
+                  id="assignment-officer"
+                  value={
+                    selectedOfficer
+                  }
+                  onChange={(event) =>
+                    setSelectedOfficer(
+                      event.target.value,
+                    )
+                  }
+                  disabled={
+                    assignmentLoading ||
+                    !selectedDepartment
+                  }
+                >
+                  <option value="">
+                    {!selectedDepartment
+                      ? "Select department first"
+                      : officers.length ===
+                          0
+                        ? "No active officers"
+                        : "Select officer"}
+                  </option>
+
+                  {officers.map(
+                    (officer) => (
+                      <option
+                        key={
+                          officer.id
+                        }
+                        value={
+                          officer.id
+                        }
+                      >
+                        {officer.email}
+                      </option>
+                    ),
+                  )}
+
+                </select>
+
+              </div>
+
+
+              {assignmentError && (
+                <p
+                  className="admin-assignment-error"
+                  role="alert"
+                >
+                  {assignmentError}
+                </p>
+              )}
+
+
+              <div className="admin-assignment-buttons">
+
+                <button
+                  type="button"
+                  className="admin-assignment-cancel"
+                  onClick={() => {
+                    setShowAssignmentBox(
+                      false,
+                    );
+                    setSelectedDepartment(
+                      "",
+                    );
+                    setSelectedOfficer(
+                      "",
+                    );
+                    setOfficers([]);
+                    setAssignmentError(
+                      "",
+                    );
+                  }}
+                  disabled={
+                    assignmentLoading
+                  }
+                >
+                  Cancel
+                </button>
+
+
+                <button
+                  type="button"
+                  className="admin-assignment-primary"
+                  onClick={
+                    handleAssignment
+                  }
+                  disabled={
+                    assignmentLoading
+                  }
+                >
+                  {assignmentLoading
+                    ? "Assigning..."
+                    : activeAssignment
+                      ? "Confirm reassignment"
+                      : "Confirm assignment"}
+                </button>
+
+              </div>
+
+            </div>
+          )}
+
+        </section>
+      )}
 
 
       {canTakeOfficerAction && (
         <section className="complaint-action-card">
 
           <div className="complaint-action-content">
+
             <p className="complaint-action-eyebrow">
               OFFICER ACTION
             </p>
 
-            <h2>{actionLabel}</h2>
+            <h2>
+              {actionLabel}
+            </h2>
 
-            <p>{actionDescription}</p>
+            <p>
+              {actionDescription}
+            </p>
+
           </div>
 
 
@@ -412,7 +884,9 @@ function ComplaintDetailPage() {
               type="button"
               className="complaint-action-primary"
               onClick={() =>
-                setShowActionBox(true)
+                setShowActionBox(
+                  true,
+                )
               }
             >
               {actionLabel}
@@ -422,14 +896,18 @@ function ComplaintDetailPage() {
 
               <label htmlFor="action-comment">
                 Comment
-                <span>Optional</span>
+                <span>
+                  Optional
+                </span>
               </label>
 
               <textarea
                 id="action-comment"
                 value={comment}
                 onChange={(event) =>
-                  setComment(event.target.value)
+                  setComment(
+                    event.target.value,
+                  )
                 }
                 placeholder={
                   complaint.status ===
@@ -438,7 +916,9 @@ function ComplaintDetailPage() {
                     : "Add an optional note about this action."
                 }
                 rows={4}
-                disabled={actionLoading}
+                disabled={
+                  actionLoading
+                }
               />
 
 
@@ -458,14 +938,21 @@ function ComplaintDetailPage() {
                   type="button"
                   className="complaint-action-cancel"
                   onClick={() => {
-                    setShowActionBox(false);
+                    setShowActionBox(
+                      false,
+                    );
                     setComment("");
-                    setActionError("");
+                    setActionError(
+                      "",
+                    );
                   }}
-                  disabled={actionLoading}
+                  disabled={
+                    actionLoading
+                  }
                 >
                   Cancel
                 </button>
+
 
                 <button
                   type="button"
@@ -473,7 +960,9 @@ function ComplaintDetailPage() {
                   onClick={
                     handleOfficerAction
                   }
-                  disabled={actionLoading}
+                  disabled={
+                    actionLoading
+                  }
                 >
                   {actionLoading
                     ? "Updating..."
@@ -481,8 +970,10 @@ function ComplaintDetailPage() {
                 </button>
 
               </div>
+
             </div>
           )}
+
         </section>
       )}
 
@@ -491,17 +982,21 @@ function ComplaintDetailPage() {
         <section className="admin-close-card">
 
           <div className="admin-close-content">
+
             <p className="admin-close-eyebrow">
               ADMINISTRATOR ACTION
             </p>
 
-            <h2>Close complaint</h2>
+            <h2>
+              Close complaint
+            </h2>
 
             <p>
-              This complaint has been resolved by
-              the officer. Closing it will complete
-              the complaint lifecycle.
+              This complaint has been resolved
+              by the officer. Closing it will
+              complete the complaint lifecycle.
             </p>
+
           </div>
 
 
@@ -510,8 +1005,12 @@ function ComplaintDetailPage() {
               type="button"
               className="admin-close-primary"
               onClick={() => {
-                setShowCloseBox(true);
-                setActionError("");
+                setShowCloseBox(
+                  true,
+                );
+                setActionError(
+                  "",
+                );
               }}
             >
               Close complaint
@@ -521,18 +1020,24 @@ function ComplaintDetailPage() {
 
               <label htmlFor="close-comment">
                 Closing comment
-                <span>Optional</span>
+                <span>
+                  Optional
+                </span>
               </label>
 
               <textarea
                 id="close-comment"
                 value={comment}
                 onChange={(event) =>
-                  setComment(event.target.value)
+                  setComment(
+                    event.target.value,
+                  )
                 }
                 placeholder="Example: Resolution verified and complaint closed."
                 rows={4}
-                disabled={actionLoading}
+                disabled={
+                  actionLoading
+                }
               />
 
 
@@ -552,14 +1057,21 @@ function ComplaintDetailPage() {
                   type="button"
                   className="admin-close-cancel"
                   onClick={() => {
-                    setShowCloseBox(false);
+                    setShowCloseBox(
+                      false,
+                    );
                     setComment("");
-                    setActionError("");
+                    setActionError(
+                      "",
+                    );
                   }}
-                  disabled={actionLoading}
+                  disabled={
+                    actionLoading
+                  }
                 >
                   Cancel
                 </button>
+
 
                 <button
                   type="button"
@@ -567,7 +1079,9 @@ function ComplaintDetailPage() {
                   onClick={
                     handleCloseComplaint
                   }
-                  disabled={actionLoading}
+                  disabled={
+                    actionLoading
+                  }
                 >
                   {actionLoading
                     ? "Closing..."
@@ -575,8 +1089,10 @@ function ComplaintDetailPage() {
                 </button>
 
               </div>
+
             </div>
           )}
+
         </section>
       )}
 
@@ -588,7 +1104,9 @@ function ComplaintDetailPage() {
           <article className="complaint-detail-card">
 
             <div className="complaint-detail-card-header">
-              <h2>Description</h2>
+              <h2>
+                Description
+              </h2>
             </div>
 
             <div className="complaint-description">
@@ -601,11 +1119,15 @@ function ComplaintDetailPage() {
           <article className="complaint-detail-card">
 
             <div className="complaint-detail-card-header">
-              <h2>Status history</h2>
+
+              <h2>
+                Status history
+              </h2>
 
               <span>
                 {history.length} events
               </span>
+
             </div>
 
 
@@ -644,19 +1166,24 @@ function ComplaintDetailPage() {
 
                         </div>
 
+
                         <p>
                           {item.comment ||
                             "Status updated."}
                         </p>
 
-                        {item.changed_by && (
+
+                        {item.changed_by_email && (
                           <small>
                             Updated by{" "}
-                            {item.changed_by}
+                            {
+                              item.changed_by_email
+                            }
                           </small>
                         )}
 
                       </div>
+
                     </div>
                   ),
                 )}
@@ -674,13 +1201,20 @@ function ComplaintDetailPage() {
           <article className="complaint-detail-card">
 
             <div className="complaint-detail-card-header">
-              <h2>Complaint information</h2>
+
+              <h2>
+                Complaint information
+              </h2>
+
             </div>
+
 
             <dl className="complaint-info-list">
 
               <div>
-                <dt>Category</dt>
+                <dt>
+                  Category
+                </dt>
 
                 <dd>
                   {complaint.category_name ||
@@ -690,7 +1224,9 @@ function ComplaintDetailPage() {
 
 
               <div>
-                <dt>Department</dt>
+                <dt>
+                  Department
+                </dt>
 
                 <dd>
                   {complaint.department_name ||
@@ -700,7 +1236,9 @@ function ComplaintDetailPage() {
 
 
               <div>
-                <dt>Priority</dt>
+                <dt>
+                  Priority
+                </dt>
 
                 <dd>
                   <ComplaintPriorityBadge
@@ -713,7 +1251,9 @@ function ComplaintDetailPage() {
 
 
               <div>
-                <dt>Location</dt>
+                <dt>
+                  Location
+                </dt>
 
                 <dd>
                   {complaint.location ||
@@ -723,7 +1263,9 @@ function ComplaintDetailPage() {
 
 
               <div>
-                <dt>Latitude</dt>
+                <dt>
+                  Latitude
+                </dt>
 
                 <dd>
                   {complaint.latitude ??
@@ -733,7 +1275,9 @@ function ComplaintDetailPage() {
 
 
               <div>
-                <dt>Longitude</dt>
+                <dt>
+                  Longitude
+                </dt>
 
                 <dd>
                   {complaint.longitude ??
@@ -743,7 +1287,9 @@ function ComplaintDetailPage() {
 
 
               <div>
-                <dt>Last updated</dt>
+                <dt>
+                  Last updated
+                </dt>
 
                 <dd>
                   {formatDate(
@@ -761,43 +1307,61 @@ function ComplaintDetailPage() {
       </div>
 
 
-      {complaint.status === "RESOLVED" && (
+      {complaint.status ===
+        "RESOLVED" && (
         <div className="complaint-resolution-notice">
-          <strong>Complaint resolved</strong>
+
+          <strong>
+            Complaint resolved
+          </strong>
 
           <span>
-            This complaint has been marked as resolved
-            and is waiting for administrator closure.
+            This complaint has been marked
+            as resolved and is waiting for
+            administrator closure.
           </span>
+
         </div>
       )}
 
 
-      {complaint.status === "CLOSED" && (
+      {complaint.status ===
+        "CLOSED" && (
         <div className="complaint-resolution-notice">
-          <strong>Complaint closed</strong>
+
+          <strong>
+            Complaint closed
+          </strong>
 
           <span>
             This complaint has completed its
             resolution lifecycle.
           </span>
+
         </div>
       )}
 
 
-      {complaint.status === "ESCALATED" && (
+      {complaint.status ===
+        "ESCALATED" && (
         <div className="complaint-escalation-notice">
-          <strong>SLA escalation</strong>
+
+          <strong>
+            SLA escalation
+          </strong>
 
           <span>
-            This complaint has exceeded its resolution
-            SLA and requires attention.
+            This complaint has exceeded its
+            resolution SLA and requires
+            attention.
           </span>
+
         </div>
       )}
 
     </section>
   );
 }
+
 
 export default ComplaintDetailPage;
