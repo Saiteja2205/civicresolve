@@ -73,7 +73,10 @@ function DashboardLayout() {
           </div>
 
 
-          <nav className="dashboard-nav">
+          <nav
+            className="dashboard-nav"
+            aria-label="Dashboard navigation"
+          >
             <NavLink
               to="/dashboard"
               end

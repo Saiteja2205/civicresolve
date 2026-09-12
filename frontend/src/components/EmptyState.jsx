@@ -6,14 +6,22 @@ function EmptyState({
 }) {
   return (
     <div className="empty-state">
-      <div className="empty-state-icon">—</div>
+      <div
+        className="empty-state-icon"
+        aria-hidden="true"
+      >
+        —
+      </div>
 
       <h3>{title}</h3>
 
       <p>{message}</p>
 
       {actionLabel && onAction && (
-        <button type="button" onClick={onAction}>
+        <button
+          type="button"
+          onClick={onAction}
+        >
           {actionLabel}
         </button>
       )}

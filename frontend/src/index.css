@@ -20,11 +20,27 @@ body {
     BlinkMacSystemFont,
     "Segoe UI",
     sans-serif;
+  background: #f5f7fa;
+  color: #172033;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 button,
-input {
+input,
+select,
+textarea {
   font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+img {
+  max-width: 100%;
 }

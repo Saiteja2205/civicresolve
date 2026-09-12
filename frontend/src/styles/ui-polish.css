@@ -1,0 +1,122 @@
+/* =========================================
+   CIVICRESOLVE — DAY 16 UI POLISH
+   ========================================= */
+
+/* ---------- Global box sizing ---------- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* ---------- Keyboard accessibility ---------- */
+
+:focus-visible {
+  outline: 3px solid rgba(38, 125, 128, 0.35);
+  outline-offset: 2px;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid rgba(38, 125, 128, 0.35);
+  outline-offset: 2px;
+}
+
+/* ---------- Buttons ---------- */
+
+button {
+  font-family: inherit;
+}
+
+button:not(:disabled) {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+/* ---------- Form controls ---------- */
+
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #9aa5b1;
+}
+
+input:disabled,
+select:disabled,
+textarea:disabled {
+  cursor: not-allowed;
+  background: #f4f6f8;
+}
+
+/* ---------- Links ---------- */
+
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ---------- Tables ---------- */
+
+table {
+  border-collapse: collapse;
+}
+
+/* ---------- Images ---------- */
+
+img {
+  max-width: 100%;
+}
+
+/* ---------- Text wrapping ---------- */
+
+h1,
+h2,
+h3,
+h4,
+p,
+span,
+strong,
+small,
+td,
+th,
+dd {
+  overflow-wrap: anywhere;
+}
+
+/* ---------- Reduced motion ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---------- Mobile touch targets ---------- */
+
+@media (max-width: 640px) {
+  button,
+  a {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button {
+    min-height: 38px;
+  }
+}

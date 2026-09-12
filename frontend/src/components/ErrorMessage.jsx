@@ -4,14 +4,23 @@ function ErrorMessage({ message, onRetry }) {
   }
 
   return (
-    <div className="error-message" role="alert">
+    <div
+      className="error-message"
+      role="alert"
+      aria-live="assertive"
+    >
       <div className="error-message-content">
         <strong>Something went wrong</strong>
+
         <span>{message}</span>
       </div>
 
       {onRetry && (
-        <button type="button" onClick={onRetry}>
+        <button
+          type="button"
+          onClick={onRetry}
+          aria-label="Try loading the information again"
+        >
           Try again
         </button>
       )}
