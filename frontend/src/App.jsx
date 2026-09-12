@@ -12,6 +12,7 @@ import { useAuth } from "./context/AuthContext.jsx";
 import DashboardLayout from "./layouts/DashboardLayout.jsx";
 
 import AdminDashboard from "./pages/AdminDashboard.jsx";
+import AnalyticsDashboard from "./pages/AnalyticsDashboard.jsx";
 import CitizenDashboard from "./pages/CitizenDashboard.jsx";
 import ComplaintCreatePage from "./pages/ComplaintCreatePage.jsx";
 import ComplaintDetailPage from "./pages/ComplaintDetailPage.jsx";
@@ -320,6 +321,28 @@ function App() {
         />
 
         <Route
+          path="analytics"
+          element={
+            <RoleRoute
+              allowedRoles={["ADMIN"]}
+            >
+              <AnalyticsDashboard />
+            </RoleRoute>
+          }
+        />
+
+        <Route
+          path="sla"
+          element={
+            <RoleRoute
+              allowedRoles={["ADMIN"]}
+            >
+              <SLADashboard />
+            </RoleRoute>
+          }
+        />
+
+        <Route
           path="complaints"
           element={
             <RoleRoute
@@ -380,17 +403,6 @@ function App() {
             </RoleRoute>
           }
         />
-
-        <Route
-          path="sla"
-          element={
-            <RoleRoute
-              allowedRoles={["ADMIN"]}
-            >
-              <SLADashboard />
-            </RoleRoute>
-          }
-        />
       </Route>
 
       <Route
@@ -415,5 +427,6 @@ function App() {
     </Routes>
   );
 }
+
 
 export default App;

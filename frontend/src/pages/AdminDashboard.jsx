@@ -160,7 +160,12 @@ function AdminDashboard() {
           >
             View all complaints
           </Link>
-
+          <Link
+            to="/dashboard/analytics"
+            className="admin-primary-button"
+          >
+            Analytics
+          </Link>
           <Link
             to="/dashboard/sla"
             className="admin-primary-button"
