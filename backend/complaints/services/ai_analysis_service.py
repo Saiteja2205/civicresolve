@@ -3,12 +3,17 @@ import json
 from django.db import transaction
 
 from complaints.models import ComplaintAnalysis
-from complaints.services.ai_output_validator import validate_ai_output
-from complaints.services.ai_prompt import build_complaint_analysis_prompt
+from complaints.services.ai_output_validator import (
+    validate_ai_output,
+)
+from complaints.services.ai_prompt import (
+    build_complaint_analysis_prompt,
+)
 from complaints.services.ai_provider import (
     AIProviderError,
     GeminiProvider,
 )
+from organizations.models import Category
 
 
 def parse_ai_response(response_text):
@@ -28,8 +33,6 @@ def parse_ai_response(response_text):
             "AI response is empty."
         )
 
-    # Handle a response that may still contain markdown
-    # code fences, even though JSON output was requested.
     if response_text.startswith("```"):
         lines = response_text.splitlines()
 
@@ -57,8 +60,61 @@ def parse_ai_response(response_text):
     return data
 
 
+def apply_category_fallback(
+    complaint,
+    validated_output,
+):
+    """
+    If AI does not provide a category, use the category
+    explicitly selected by the citizen as a safe routing
+    fallback.
+
+    AI predictions remain authoritative whenever they are
+    valid.
+    """
+
+    if validated_output["predicted_category"] is not None:
+        return validated_output
+
+    if not complaint.category_id:
+        raise AIProviderError(
+            "AI did not predict a category and the complaint "
+            "does not contain a selected category."
+        )
+
+    category = (
+        Category.objects
+        .filter(
+            id=complaint.category_id,
+            is_active=True,
+            department__is_active=True,
+        )
+        .select_related("department")
+        .first()
+    )
+
+    if category is None:
+        raise AIProviderError(
+            "The complaint's selected category is invalid "
+            "or inactive."
+        )
+
+    validated_output["predicted_category"] = (
+        category.id
+    )
+
+    validated_output["predicted_department"] = (
+        category.department_id
+    )
+
+    return validated_output
+
+
 @transaction.atomic
-def create_ai_analysis(complaint, ai_output=None):
+def create_ai_analysis(
+    complaint,
+    ai_output=None,
+):
     """
     Create or update the AI analysis for a complaint.
 
@@ -66,9 +122,14 @@ def create_ai_analysis(complaint, ai_output=None):
 
     If ai_output is not provided, Gemini generates the analysis.
 
-    After successful validation, the AI-predicted priority is
-    applied to the complaint so downstream SLA calculation
-    uses the AI decision.
+    The AI-predicted category and department are validated
+    against the active CivicResolve database.
+
+    If AI returns no category, the citizen-selected category
+    is used as a safe routing fallback.
+
+    The validated AI priority is applied to the complaint so
+    downstream SLA calculation uses the AI decision.
     """
 
     provider = None
@@ -90,6 +151,11 @@ def create_ai_analysis(complaint, ai_output=None):
 
     validated_output = validate_ai_output(
         ai_output
+    )
+
+    validated_output = apply_category_fallback(
+        complaint,
+        validated_output,
     )
 
     analysis, created = (
@@ -127,11 +193,10 @@ def create_ai_analysis(complaint, ai_output=None):
                     if provider is not None
                     else "CivicResolve-AI-Manual-Test"
                 ),
-            }
+            },
         )
     )
 
-    # Apply the validated AI priority to the actual complaint.
     complaint.priority = validated_output[
         "predicted_priority"
     ]

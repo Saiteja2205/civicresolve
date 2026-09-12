@@ -14,7 +14,9 @@ VALID_PRIORITIES = {
 
 def validate_ai_output(data):
     if not isinstance(data, dict):
-        raise ValueError("AI output must be a JSON object.")
+        raise ValueError(
+            "AI output must be a JSON object."
+        )
 
     required_fields = [
         "summary",
@@ -32,19 +34,25 @@ def validate_ai_output(data):
     summary = data["summary"]
 
     if not isinstance(summary, str):
-        raise ValueError("AI summary must be a string.")
+        raise ValueError(
+            "AI summary must be a string."
+        )
 
     summary = summary.strip()
 
     if not summary:
-        raise ValueError("AI summary cannot be empty.")
+        raise ValueError(
+            "AI summary cannot be empty."
+        )
 
     if len(summary) > 2000:
         raise ValueError(
             "AI summary cannot exceed 2000 characters."
         )
 
-    predicted_priority = data["predicted_priority"]
+    predicted_priority = data[
+        "predicted_priority"
+    ]
 
     if predicted_priority not in VALID_PRIORITIES:
         raise ValueError(
@@ -64,10 +72,10 @@ def validate_ai_output(data):
             predicted_category = int(
                 predicted_category
             )
-        except (TypeError, ValueError):
+        except (TypeError, ValueError) as exc:
             raise ValueError(
                 "Predicted category must be a valid ID."
-            )
+            ) from exc
 
         category = (
             Category.objects
@@ -87,17 +95,18 @@ def validate_ai_output(data):
 
         if predicted_department is None:
             raise ValueError(
-                "Department is required when a category is predicted."
+                "Department is required when a category "
+                "is predicted."
             )
 
         try:
             predicted_department = int(
                 predicted_department
             )
-        except (TypeError, ValueError):
+        except (TypeError, ValueError) as exc:
             raise ValueError(
                 "Predicted department must be a valid ID."
-            )
+            ) from exc
 
         department = (
             Department.objects
@@ -129,19 +138,27 @@ def validate_ai_output(data):
         urgency_score = Decimal(
             str(data["urgency_score"])
         )
-    except (InvalidOperation, TypeError, ValueError):
+    except (
+        InvalidOperation,
+        TypeError,
+        ValueError,
+    ) as exc:
         raise ValueError(
             "Urgency score must be a valid number."
-        )
+        ) from exc
 
     try:
         confidence_score = Decimal(
             str(data["confidence_score"])
         )
-    except (InvalidOperation, TypeError, ValueError):
+    except (
+        InvalidOperation,
+        TypeError,
+        ValueError,
+    ) as exc:
         raise ValueError(
             "Confidence score must be a valid number."
-        )
+        ) from exc
 
     if urgency_score < 0 or urgency_score > 100:
         raise ValueError(

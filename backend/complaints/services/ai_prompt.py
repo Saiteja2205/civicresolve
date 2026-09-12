@@ -11,16 +11,24 @@ def build_complaint_analysis_prompt(complaint):
     """
 
     departments = list(
-        Department.objects.values("id", "name")
+        Department.objects
+        .filter(is_active=True)
+        .values("id", "name")
         .order_by("id")
     )
 
     categories = list(
-        Category.objects.values(
+        Category.objects
+        .filter(
+            is_active=True,
+            department__is_active=True,
+        )
+        .values(
             "id",
             "name",
             "department_id",
-        ).order_by("id")
+        )
+        .order_by("id")
     )
 
     department_lines = "\n".join(
@@ -36,10 +44,30 @@ def build_complaint_analysis_prompt(complaint):
         for category in categories
     )
 
+    selected_category = (
+        complaint.category
+        if complaint.category_id
+        else None
+    )
+
+    selected_category_text = (
+        (
+            f"Citizen-selected category: "
+            f"ID {selected_category.id} - "
+            f"{selected_category.name} "
+            f"(Department ID: "
+            f"{selected_category.department_id})"
+        )
+        if selected_category
+        else "Citizen-selected category: Not provided"
+    )
+
     prompt = f"""
 You are the complaint analysis engine for CivicResolve.
 
-Analyze the following citizen complaint.
+Analyze the following citizen complaint and determine the
+most appropriate category, department, priority, urgency,
+and confidence.
 
 COMPLAINT TITLE:
 {complaint.title}
@@ -50,22 +78,24 @@ COMPLAINT DESCRIPTION:
 LOCATION:
 {complaint.location or "Not provided"}
 
+{selected_category_text}
+
 AVAILABLE DEPARTMENTS:
 {department_lines}
 
 AVAILABLE CATEGORIES:
 {category_lines}
 
-Your task is to analyze the complaint and return a structured JSON object.
+Your task is to analyze the complaint and return a structured
+JSON object.
 
 Return ONLY valid JSON.
 
 The JSON must contain exactly these fields:
-
 {{
     "summary": "A concise summary of the complaint.",
-    "predicted_category": null,
-    "predicted_department": null,
+    "predicted_category": 0,
+    "predicted_department": 0,
     "predicted_priority": "LOW",
     "urgency_score": 0,
     "confidence_score": 0
@@ -75,40 +105,50 @@ RULES:
 
 1. summary must clearly describe the main issue.
 
-2. predicted_category must be the ID of the most appropriate
+2. predicted_category MUST be the ID of the most appropriate
    category from the AVAILABLE CATEGORIES list.
 
-3. predicted_department must be the ID of the department responsible
-   for the selected category.
+3. predicted_department MUST be the ID of the department
+   responsible for the selected category.
 
-4. The predicted_category and predicted_department must use only
-   IDs that exist in the lists provided above.
+4. predicted_category MUST NOT be null.
 
-5. The selected category's department_id must match
+5. predicted_department MUST NOT be null.
+
+6. The predicted_category and predicted_department must use
+   only IDs that exist in the lists provided above.
+
+7. The selected category's department_id must match
    predicted_department.
 
-6. Do not invent category IDs or department IDs.
+8. Do not invent category IDs or department IDs.
 
-7. If no category can be determined reliably, return null for
-   predicted_category and predicted_department.
+9. Use the citizen-selected category as useful context,
+   but independently evaluate the complaint description.
+   If the complaint clearly belongs to another category,
+   select the more appropriate category from the available
+   categories.
 
-8. predicted_priority must be exactly one of:
-   LOW
-   MEDIUM
-   HIGH
-   CRITICAL
+10. predicted_priority must be exactly one of:
+    LOW
+    MEDIUM
+    HIGH
+    CRITICAL
 
-9. urgency_score must be a number between 0 and 100.
+11. urgency_score must be a number between 0 and 100.
 
-10. confidence_score must be a number between 0 and 100.
+12. confidence_score must be a number between 0 and 100.
 
-11. Consider the impact, severity, affected users, duration,
+13. Consider the impact, severity, affected users, duration,
     safety implications, and urgency when assigning priority
     and urgency_score.
 
-12. Do not include markdown.
+14. Do not include markdown.
 
-13. Do not include explanations outside the JSON object.
+15. Do not include explanations outside the JSON object.
+
+16. Always select the best available category. Do not return
+    null for predicted_category or predicted_department.
 
 Return only the JSON object.
 """
