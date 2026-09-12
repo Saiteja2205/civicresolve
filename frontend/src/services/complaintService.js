@@ -41,3 +41,45 @@ export async function createComplaint(
 
   return response.data;
 }
+
+export async function acknowledgeComplaint(
+  complaintId,
+  comment = "",
+) {
+  const response = await api.post(
+    `/complaints/${complaintId}/acknowledge/`,
+    comment.trim()
+      ? { comment: comment.trim() }
+      : {},
+  );
+
+  return response.data;
+}
+
+export async function startComplaint(
+  complaintId,
+  comment = "",
+) {
+  const response = await api.post(
+    `/complaints/${complaintId}/start/`,
+    comment.trim()
+      ? { comment: comment.trim() }
+      : {},
+  );
+
+  return response.data;
+}
+
+export async function resolveComplaint(
+  complaintId,
+  comment = "",
+) {
+  const response = await api.post(
+    `/complaints/${complaintId}/resolve/`,
+    comment.trim()
+      ? { comment: comment.trim() }
+      : {},
+  );
+
+  return response.data;
+}

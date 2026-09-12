@@ -1,0 +1,348 @@
+.officer-dashboard {
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+}
+
+.officer-dashboard-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.officer-dashboard-eyebrow,
+.officer-section-eyebrow {
+  margin: 0 0 7px;
+  color: #6941c6;
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+}
+
+.officer-dashboard-header h1 {
+  margin: 0 0 8px;
+  color: #101828;
+  font-size: clamp(2rem, 4vw, 2.8rem);
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+}
+
+.officer-dashboard-header > div:first-child > p:last-child {
+  max-width: 700px;
+  margin: 0;
+  color: #667085;
+  line-height: 1.6;
+}
+
+.officer-refresh-button {
+  min-height: 44px;
+  padding: 0 17px;
+  border: 1px solid #d0d5dd;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #344054;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.officer-refresh-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.officer-refresh-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.officer-profile-strip {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  margin-bottom: 22px;
+  padding: 16px 18px;
+  border: 1px solid #e4e7ec;
+  border-radius: 13px;
+  background: #ffffff;
+}
+
+.officer-profile-strip > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.officer-profile-strip span {
+  color: #98a2b3;
+  font-size: 0.72rem;
+}
+
+.officer-profile-strip strong {
+  color: #344054;
+  font-size: 0.84rem;
+}
+
+.officer-role-pill {
+  margin-left: auto;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #f4f3ff;
+  color: #6941c6 !important;
+  font-size: 0.68rem !important;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+}
+
+.officer-dashboard-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 22px;
+  padding: 13px 15px;
+  border: 1px solid #fecdca;
+  border-radius: 10px;
+  background: #fef3f2;
+  color: #b42318;
+  font-size: 0.9rem;
+}
+
+.officer-dashboard-error button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.officer-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.officer-stat-card {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid #e4e7ec;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 6px 24px rgba(16, 24, 40, 0.04);
+}
+
+.officer-stat-alert {
+  border-color: #fecdca;
+}
+
+.officer-stat-card > span {
+  color: #667085;
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.officer-stat-card > strong {
+  display: block;
+  margin-top: 17px;
+  color: #101828;
+  font-size: 2rem;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.officer-stat-card > p {
+  margin: 10px 0 0;
+  color: #98a2b3;
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.officer-dashboard-card {
+  margin-bottom: 22px;
+  border: 1px solid #e4e7ec;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 8px 30px rgba(16, 24, 40, 0.04);
+  overflow: hidden;
+}
+
+.officer-section-header {
+  padding: 24px 25px 20px;
+}
+
+.officer-section-header h2 {
+  margin: 0 0 5px;
+  color: #101828;
+  font-size: 1.2rem;
+}
+
+.officer-section-header > div > p:last-child {
+  margin: 0;
+  color: #667085;
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.officer-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.officer-complaint-table {
+  width: 100%;
+  min-width: 900px;
+  border-collapse: collapse;
+}
+
+.officer-complaint-table th {
+  padding: 11px 16px;
+  border-top: 1px solid #eaecf0;
+  border-bottom: 1px solid #eaecf0;
+  background: #f9fafb;
+  color: #667085;
+  font-size: 0.7rem;
+  font-weight: 750;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.officer-complaint-table td {
+  padding: 15px 16px;
+  border-bottom: 1px solid #f2f4f7;
+  color: #344054;
+  font-size: 0.83rem;
+  vertical-align: middle;
+}
+
+.officer-complaint-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.officer-complaint-table tbody tr:hover {
+  background: #fcfcfd;
+}
+
+.officer-ticket {
+  color: #6941c6;
+  font-size: 0.78rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.officer-title {
+  max-width: 280px;
+  overflow: hidden;
+  color: #101828;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.officer-location {
+  margin-top: 4px;
+  color: #98a2b3;
+  font-size: 0.74rem;
+}
+
+.officer-view-link {
+  color: #6941c6;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.officer-view-link:hover {
+  text-decoration: underline;
+}
+
+.officer-empty-state {
+  padding: 55px 25px;
+  text-align: center;
+}
+
+.officer-empty-state h3 {
+  margin: 0 0 7px;
+  color: #344054;
+  font-size: 1rem;
+}
+
+.officer-empty-state p {
+  margin: 0;
+  color: #98a2b3;
+  font-size: 0.84rem;
+}
+
+.officer-loading {
+  display: grid;
+  gap: 1px;
+}
+
+.officer-loading div {
+  height: 52px;
+  border-bottom: 1px solid #f2f4f7;
+  background: linear-gradient(
+    90deg,
+    #f9fafb,
+    #f2f4f7,
+    #f9fafb
+  );
+  animation: officer-loading-animation 1.4s infinite;
+}
+
+@keyframes officer-loading-animation {
+  0% {
+    opacity: 0.55;
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0.55;
+  }
+}
+
+@media (max-width: 1100px) {
+  .officer-stat-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .officer-dashboard-header {
+    flex-direction: column;
+  }
+
+  .officer-refresh-button {
+    width: 100%;
+  }
+
+  .officer-profile-strip {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .officer-role-pill {
+    margin-left: 0;
+  }
+
+  .officer-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .officer-section-header {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 500px) {
+  .officer-stat-grid {
+    grid-template-columns: 1fr;
+  }
+}
