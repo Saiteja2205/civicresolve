@@ -19,6 +19,7 @@ from .models import (
     Complaint,
     ComplaintAnalysis,
     ComplaintAssignment,
+    ComplaintDuplicate,
     ComplaintHistory,
     ComplaintSLA,
 )
@@ -27,6 +28,7 @@ from .serializers import (
     ComplaintSerializer,
     ComplaintAnalysisSerializer,
     ComplaintAssignmentSerializer,
+    ComplaintDuplicateSerializer,
     ComplaintHistorySerializer,
     ComplaintSLASerializer,
 )
@@ -100,6 +102,11 @@ class ComplaintViewSet(viewsets.ModelViewSet):
                 IsAuthenticated,
             ]
 
+        elif self.action == "duplicates":
+            permission_classes = [
+                IsAuthenticated,
+            ]
+
         else:
             permission_classes = [
                 IsAuthenticated,
@@ -133,6 +140,50 @@ class ComplaintViewSet(viewsets.ModelViewSet):
         )
 
         serializer.instance = complaint
+
+    @action(
+        detail=True,
+        methods=["get"],
+    )
+    def duplicates(
+        self,
+        request,
+        pk=None,
+    ):
+        complaint = self.get_object()
+
+        duplicate_records = (
+            ComplaintDuplicate.objects
+            .filter(
+                complaint=complaint,
+            )
+            .select_related(
+                "complaint",
+                "possible_duplicate",
+                "possible_duplicate__category",
+                "possible_duplicate__category__department",
+                "reviewed_by",
+            )
+            .order_by(
+                "-similarity_score",
+                "-detected_at",
+            )
+        )
+
+        serializer = ComplaintDuplicateSerializer(
+            duplicate_records,
+            many=True,
+        )
+
+        return Response(
+            {
+                "complaint_id": complaint.id,
+                "ticket_number": complaint.ticket_number,
+                "count": duplicate_records.count(),
+                "results": serializer.data,
+            },
+            status=status.HTTP_200_OK,
+        )
 
     @action(
         detail=True,
@@ -251,7 +302,6 @@ class ComplaintViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Close the currently active assignment.
         ComplaintAssignment.objects.filter(
             complaint=complaint,
             unassigned_at__isnull=True,
@@ -279,11 +329,6 @@ class ComplaintViewSet(viewsets.ModelViewSet):
             reason=assignment_reason,
         )
 
-        # A complaint that is already ASSIGNED
-        # should remain ASSIGNED.
-        #
-        # For other valid assignment states,
-        # move the complaint into ASSIGNED.
         if (
             complaint.status
             != Complaint.Status.ASSIGNED
@@ -548,6 +593,7 @@ class ComplaintViewSet(viewsets.ModelViewSet):
             status=status.HTTP_200_OK,
         )
 
+
 class ComplaintSLAViewSet(
     viewsets.ReadOnlyModelViewSet
 ):
@@ -606,6 +652,8 @@ class ComplaintSLAViewSet(
             )
 
         return queryset
+
+
 class ComplaintAssignmentViewSet(
     viewsets.ModelViewSet
 ):
@@ -706,6 +754,219 @@ class ComplaintAssignmentViewSet(
         serializer.save(
             assigned_by=self.request.user
         )
+
+
+class ComplaintDuplicateViewSet(
+    viewsets.ModelViewSet
+):
+    serializer_class = ComplaintDuplicateSerializer
+    permission_classes = [
+        IsAuthenticated,
+    ]
+
+    queryset = (
+        ComplaintDuplicate.objects
+        .select_related(
+            "complaint",
+            "possible_duplicate",
+            "possible_duplicate__category",
+            "possible_duplicate__category__department",
+            "reviewed_by",
+        )
+        .all()
+    )
+
+    def get_queryset(self):
+        user = self.request.user
+
+        if user.role == User.Role.ADMIN:
+            return self.queryset
+
+        if user.role == User.Role.OFFICER:
+            return self.queryset.filter(
+                complaint__assignments__officer=user,
+                complaint__assignments__unassigned_at__isnull=True,
+            ).distinct()
+
+        return self.queryset.filter(
+            complaint__user=user,
+        )
+
+    def create(self, request, *args, **kwargs):
+        return Response(
+            {
+                "detail": (
+                    "Duplicate records are generated "
+                    "automatically and cannot be created "
+                    "manually."
+                )
+            },
+            status=status.HTTP_405_METHOD_NOT_ALLOWED,
+        )
+
+    def destroy(self, request, *args, **kwargs):
+        return Response(
+            {
+                "detail": (
+                    "Duplicate records cannot be "
+                    "deleted through the API."
+                )
+            },
+            status=status.HTTP_405_METHOD_NOT_ALLOWED,
+        )
+
+    def update(self, request, *args, **kwargs):
+        return self._review_duplicate(
+            request,
+            partial=False,
+            pk=kwargs.get("pk"),
+        )
+
+    def partial_update(self, request, *args, **kwargs):
+        return self._review_duplicate(
+            request,
+            partial=True,
+            pk=kwargs.get("pk"),
+        )
+
+    def _review_duplicate(
+        self,
+        request,
+        partial,
+        pk,
+    ):
+        if request.user.role != User.Role.ADMIN:
+            return Response(
+                {
+                    "detail": (
+                        "Only administrators can "
+                        "review duplicate complaints."
+                    )
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        try:
+            duplicate = self.get_queryset().get(
+                pk=pk,
+            )
+        except ComplaintDuplicate.DoesNotExist:
+            return Response(
+                {
+                    "detail": "Duplicate record not found."
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        allowed_fields = {
+            "status",
+            "review_comment",
+        }
+
+        unexpected_fields = (
+            set(request.data.keys())
+            - allowed_fields
+        )
+
+        if unexpected_fields:
+            return Response(
+                {
+                    "detail": (
+                        "Only status and review_comment "
+                        "can be updated."
+                    ),
+                    "fields": sorted(
+                        unexpected_fields
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        review_status = request.data.get(
+            "status",
+            duplicate.status,
+        )
+
+        allowed_statuses = {
+            ComplaintDuplicate.Status.CONFIRMED,
+            ComplaintDuplicate.Status.REJECTED,
+            ComplaintDuplicate.Status.PENDING,
+        }
+
+        if review_status not in allowed_statuses:
+            return Response(
+                {
+                    "detail": (
+                        "Invalid duplicate review status."
+                    ),
+                    "allowed_statuses": sorted(
+                        allowed_statuses
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        review_comment = request.data.get(
+            "review_comment",
+            duplicate.review_comment,
+        )
+
+        if review_comment is None:
+            review_comment = ""
+
+        if not isinstance(review_comment, str):
+            return Response(
+                {
+                    "detail": (
+                        "review_comment must be a string."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        review_comment = review_comment.strip()
+
+        if len(review_comment) > 2000:
+            return Response(
+                {
+                    "detail": (
+                        "review_comment cannot exceed "
+                        "2000 characters."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        duplicate.status = review_status
+        duplicate.review_comment = review_comment
+
+        if review_status == ComplaintDuplicate.Status.PENDING:
+            duplicate.reviewed_by = None
+            duplicate.reviewed_at = None
+        else:
+            duplicate.reviewed_by = request.user
+            duplicate.reviewed_at = timezone.now()
+
+        duplicate.save(
+            update_fields=[
+                "status",
+                "review_comment",
+                "reviewed_by",
+                "reviewed_at",
+                "updated_at",
+            ]
+        )
+
+        serializer = self.get_serializer(
+            duplicate,
+        )
+
+        return Response(
+            serializer.data,
+            status=status.HTTP_200_OK,
+        )
+
+
 class UserActivityListView(generics.ListAPIView):
     permission_classes = [
         IsAuthenticated,

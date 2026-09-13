@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.db import models
-
+from pgvector.django import VectorField
 from organizations.models import Category
 
 
@@ -336,3 +336,130 @@ class ComplaintSLA(models.Model):
 
     def __str__(self):
         return f"SLA - {self.complaint.ticket_number}"
+
+
+class ComplaintEmbedding(models.Model):
+    complaint = models.OneToOneField(
+        Complaint,
+        on_delete=models.CASCADE,
+        related_name="embedding",
+    )
+
+    embedding = VectorField(
+        dimensions=768,
+    )
+
+    embedding_model = models.CharField(
+        max_length=100,
+    )
+
+    source_text_hash = models.CharField(
+        max_length=64,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Embedding for {self.complaint.ticket_number}"
+
+
+class ComplaintDuplicate(models.Model):
+
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending Review"
+        CONFIRMED = "CONFIRMED", "Confirmed Duplicate"
+        REJECTED = "REJECTED", "Not a Duplicate"
+
+    complaint = models.ForeignKey(
+        Complaint,
+        on_delete=models.CASCADE,
+        related_name="duplicate_candidates",
+    )
+
+    possible_duplicate = models.ForeignKey(
+        Complaint,
+        on_delete=models.CASCADE,
+        related_name="possible_duplicate_of",
+    )
+
+    similarity_score = models.DecimalField(
+        max_digits=6,
+        decimal_places=5,
+    )
+
+    detection_threshold = models.DecimalField(
+        max_digits=6,
+        decimal_places=5,
+    )
+
+    embedding_model = models.CharField(
+        max_length=100,
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+    )
+
+    detected_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="duplicate_reviews",
+    )
+
+    reviewed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    review_comment = models.TextField(
+        blank=True,
+    )
+
+    class Meta:
+        ordering = ["-detected_at"]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=["complaint", "possible_duplicate"],
+                name="unique_complaint_duplicate_pair",
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(complaint=models.F("possible_duplicate")),
+                name="complaint_duplicate_not_self",
+            ),
+        ]
+
+        indexes = [
+            models.Index(
+                fields=["status", "-detected_at"],
+                name="duplicate_status_detected_idx",
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.complaint.ticket_number} ~ "
+            f"{self.possible_duplicate.ticket_number} "
+            f"({self.similarity_score})"
+        )

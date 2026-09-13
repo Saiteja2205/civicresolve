@@ -1,11 +1,13 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
-from .views import UserActivityListView
+
 from .resolution_views import ComplaintReopenView
 from .views import (
     ComplaintAssignmentViewSet,
+    ComplaintDuplicateViewSet,
     ComplaintSLAViewSet,
     ComplaintViewSet,
+    UserActivityListView,
 )
 
 
@@ -29,6 +31,12 @@ router.register(
     basename="sla",
 )
 
+router.register(
+    r"complaint-duplicates",
+    ComplaintDuplicateViewSet,
+    basename="complaint-duplicate",
+)
+
 
 urlpatterns = [
     path(
@@ -37,9 +45,9 @@ urlpatterns = [
         name="complaint-reopen",
     ),
     path(
-    "activity/",
-    UserActivityListView.as_view(),
-    name="user-activity",
+        "activity/",
+        UserActivityListView.as_view(),
+        name="user-activity",
     ),
 ]
 

@@ -92,8 +92,8 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
 
     "corsheaders",
-
     "rest_framework",
+    "pgvector.django",
 
     "accounts",
     "organizations",

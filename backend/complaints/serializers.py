@@ -4,6 +4,7 @@ from .models import (
     Complaint,
     ComplaintAnalysis,
     ComplaintAssignment,
+    ComplaintDuplicate,
     ComplaintHistory,
     ComplaintSLA,
 )
@@ -325,3 +326,95 @@ class ComplaintHistorySerializer(
             "new_status",
             "created_at",
         ]
+
+
+class ComplaintDuplicateSerializer(
+    serializers.ModelSerializer
+):
+    complaint_ticket_number = serializers.CharField(
+        source="complaint.ticket_number",
+        read_only=True,
+    )
+
+    complaint_title = serializers.CharField(
+        source="complaint.title",
+        read_only=True,
+    )
+
+    possible_duplicate_ticket_number = serializers.CharField(
+        source="possible_duplicate.ticket_number",
+        read_only=True,
+    )
+
+    possible_duplicate_title = serializers.CharField(
+        source="possible_duplicate.title",
+        read_only=True,
+    )
+
+    possible_duplicate_status = serializers.CharField(
+        source="possible_duplicate.status",
+        read_only=True,
+    )
+
+    possible_duplicate_priority = serializers.CharField(
+        source="possible_duplicate.priority",
+        read_only=True,
+    )
+
+    reviewed_by_email = serializers.EmailField(
+        source="reviewed_by.email",
+        read_only=True,
+    )
+
+    similarity_percentage = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ComplaintDuplicate
+
+        fields = [
+            "id",
+            "complaint",
+            "complaint_ticket_number",
+            "complaint_title",
+            "possible_duplicate",
+            "possible_duplicate_ticket_number",
+            "possible_duplicate_title",
+            "possible_duplicate_status",
+            "possible_duplicate_priority",
+            "similarity_score",
+            "similarity_percentage",
+            "detection_threshold",
+            "embedding_model",
+            "status",
+            "detected_at",
+            "updated_at",
+            "reviewed_by",
+            "reviewed_by_email",
+            "reviewed_at",
+            "review_comment",
+        ]
+
+        read_only_fields = [
+            "id",
+            "complaint",
+            "complaint_ticket_number",
+            "complaint_title",
+            "possible_duplicate",
+            "possible_duplicate_ticket_number",
+            "possible_duplicate_title",
+            "possible_duplicate_status",
+            "possible_duplicate_priority",
+            "similarity_score",
+            "similarity_percentage",
+            "detection_threshold",
+            "embedding_model",
+            "status",
+            "detected_at",
+            "updated_at",
+            "reviewed_by",
+            "reviewed_by_email",
+            "reviewed_at",
+        ]
+
+    def get_similarity_percentage(self, obj):
+        return round(float(obj.similarity_score) * 100, 2)
