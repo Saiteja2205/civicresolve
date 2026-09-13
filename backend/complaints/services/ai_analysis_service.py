@@ -46,7 +46,6 @@ def parse_ai_response(response_text):
 
     try:
         data = json.loads(response_text)
-
     except json.JSONDecodeError as exc:
         raise AIProviderError(
             "AI returned invalid JSON."
@@ -99,9 +98,7 @@ def apply_category_fallback(
             "or inactive."
         )
 
-    validated_output["predicted_category"] = (
-        category.id
-    )
+    validated_output["predicted_category"] = category.id
 
     validated_output["predicted_department"] = (
         category.department_id
@@ -149,9 +146,14 @@ def create_ai_analysis(
             response_text
         )
 
-    validated_output = validate_ai_output(
-        ai_output
-    )
+    try:
+        validated_output = validate_ai_output(
+            ai_output
+        )
+    except (TypeError, ValueError, KeyError) as exc:
+        raise AIProviderError(
+            f"AI output validation failed: {exc}"
+        ) from exc
 
     validated_output = apply_category_fallback(
         complaint,
@@ -163,6 +165,7 @@ def create_ai_analysis(
             complaint=complaint,
             defaults={
                 "summary": validated_output["summary"],
+                "explanation": validated_output["explanation"],
                 "predicted_category_id": (
                     validated_output[
                         "predicted_category"

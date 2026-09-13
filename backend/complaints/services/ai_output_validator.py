@@ -20,6 +20,7 @@ def validate_ai_output(data):
 
     required_fields = [
         "summary",
+        "explanation",
         "predicted_priority",
         "urgency_score",
         "confidence_score",
@@ -50,9 +51,26 @@ def validate_ai_output(data):
             "AI summary cannot exceed 2000 characters."
         )
 
-    predicted_priority = data[
-        "predicted_priority"
-    ]
+    explanation = data["explanation"]
+
+    if not isinstance(explanation, str):
+        raise ValueError(
+            "AI explanation must be a string."
+        )
+
+    explanation = explanation.strip()
+
+    if not explanation:
+        raise ValueError(
+            "AI explanation cannot be empty."
+        )
+
+    if len(explanation) > 2000:
+        raise ValueError(
+            "AI explanation cannot exceed 2000 characters."
+        )
+
+    predicted_priority = data["predicted_priority"]
 
     if predicted_priority not in VALID_PRIORITIES:
         raise ValueError(
@@ -172,6 +190,7 @@ def validate_ai_output(data):
 
     return {
         "summary": summary,
+        "explanation": explanation,
         "predicted_category": predicted_category,
         "predicted_department": predicted_department,
         "predicted_priority": predicted_priority,

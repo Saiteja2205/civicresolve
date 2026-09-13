@@ -67,7 +67,7 @@ You are the complaint analysis engine for CivicResolve.
 
 Analyze the following citizen complaint and determine the
 most appropriate category, department, priority, urgency,
-and confidence.
+confidence, and a concise decision explanation.
 
 COMPLAINT TITLE:
 {complaint.title}
@@ -94,6 +94,7 @@ Return ONLY valid JSON.
 The JSON must contain exactly these fields:
 {{
     "summary": "A concise summary of the complaint.",
+    "explanation": "A concise explanation of the main factors supporting the category and priority decision.",
     "predicted_category": 0,
     "predicted_department": 0,
     "predicted_priority": "LOW",
@@ -105,50 +106,63 @@ RULES:
 
 1. summary must clearly describe the main issue.
 
-2. predicted_category MUST be the ID of the most appropriate
+2. explanation must be concise and factual. Explain the
+   important complaint characteristics that support the
+   predicted category and priority.
+
+3. Do not provide hidden reasoning, chain-of-thought,
+   internal deliberation, or step-by-step reasoning.
+
+4. explanation should normally be one or two sentences.
+
+5. predicted_category MUST be the ID of the most appropriate
    category from the AVAILABLE CATEGORIES list.
 
-3. predicted_department MUST be the ID of the department
+6. predicted_department MUST be the ID of the department
    responsible for the selected category.
 
-4. predicted_category MUST NOT be null.
+7. predicted_category MUST NOT be null.
 
-5. predicted_department MUST NOT be null.
+8. predicted_department MUST NOT be null.
 
-6. The predicted_category and predicted_department must use
+9. The predicted_category and predicted_department must use
    only IDs that exist in the lists provided above.
 
-7. The selected category's department_id must match
-   predicted_department.
+10. The selected category's department_id must match
+    predicted_department.
 
-8. Do not invent category IDs or department IDs.
+11. Do not invent category IDs or department IDs.
 
-9. Use the citizen-selected category as useful context,
-   but independently evaluate the complaint description.
-   If the complaint clearly belongs to another category,
-   select the more appropriate category from the available
-   categories.
+12. Use the citizen-selected category as useful context,
+    but independently evaluate the complaint description.
+    If the complaint clearly belongs to another category,
+    select the more appropriate category from the available
+    categories.
 
-10. predicted_priority must be exactly one of:
+13. predicted_priority must be exactly one of:
     LOW
     MEDIUM
     HIGH
     CRITICAL
 
-11. urgency_score must be a number between 0 and 100.
+14. urgency_score must be a number between 0 and 100.
 
-12. confidence_score must be a number between 0 and 100.
+15. confidence_score must be a number between 0 and 100.
 
-13. Consider the impact, severity, affected users, duration,
+16. Consider the impact, severity, affected users, duration,
     safety implications, and urgency when assigning priority
     and urgency_score.
 
-14. Do not include markdown.
+17. Do not include markdown.
 
-15. Do not include explanations outside the JSON object.
+18. Do not include explanations outside the JSON object.
 
-16. Always select the best available category. Do not return
-    null for predicted_category or predicted_department.
+19. Always select the best available category.
+
+20. Always select the best available department.
+
+21. Keep the explanation suitable for display to a citizen,
+    officer, or administrator.
 
 Return only the JSON object.
 """

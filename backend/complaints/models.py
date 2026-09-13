@@ -126,6 +126,10 @@ class ComplaintAnalysis(models.Model):
         blank=True,
     )
 
+    explanation = models.TextField(
+        blank=True,
+    )
+
     predicted_category = models.ForeignKey(
         Category,
         on_delete=models.PROTECT,
@@ -218,7 +222,7 @@ class ComplaintAssignment(models.Model):
 
     def __str__(self):
         return (
-            f"{self.complaint.ticket_number} → "
+            f"{self.complaint.ticket_number} -> "
             f"{self.officer.email}"
         )
 
@@ -263,7 +267,7 @@ class ComplaintHistory(models.Model):
     def __str__(self):
         return (
             f"{self.complaint.ticket_number}: "
-            f"{self.old_status or 'NEW'} → {self.new_status}"
+            f"{self.old_status or 'NEW'} -> {self.new_status}"
         )
 
 

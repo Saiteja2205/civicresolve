@@ -98,6 +98,10 @@ class PlaceholderAIProvider(AIProvider):
                 "AI analysis is currently using the "
                 "CivicResolve placeholder provider."
             ),
+            "explanation": (
+                "The placeholder provider returned a predictable "
+                "medium-priority result for development and testing."
+            ),
             "predicted_category": None,
             "predicted_department": None,
             "predicted_priority": "MEDIUM",

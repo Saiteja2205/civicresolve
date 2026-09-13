@@ -9,6 +9,63 @@ from .models import (
 )
 
 
+class ComplaintAnalysisSerializer(
+    serializers.ModelSerializer
+):
+    complaint_ticket_number = serializers.CharField(
+        source="complaint.ticket_number",
+        read_only=True,
+    )
+
+    predicted_category_name = serializers.CharField(
+        source="predicted_category.name",
+        read_only=True,
+    )
+
+    predicted_department_name = serializers.CharField(
+        source="predicted_department.name",
+        read_only=True,
+    )
+
+    class Meta:
+        model = ComplaintAnalysis
+        fields = [
+            "id",
+            "complaint",
+            "complaint_ticket_number",
+            "summary",
+            "explanation",
+            "predicted_category",
+            "predicted_category_name",
+            "predicted_department",
+            "predicted_department_name",
+            "predicted_priority",
+            "urgency_score",
+            "confidence_score",
+            "model_name",
+            "created_at",
+            "updated_at",
+        ]
+
+        read_only_fields = [
+            "id",
+            "complaint",
+            "complaint_ticket_number",
+            "summary",
+            "explanation",
+            "predicted_category",
+            "predicted_category_name",
+            "predicted_department",
+            "predicted_department_name",
+            "predicted_priority",
+            "urgency_score",
+            "confidence_score",
+            "model_name",
+            "created_at",
+            "updated_at",
+        ]
+
+
 class ComplaintSerializer(serializers.ModelSerializer):
     user_email = serializers.EmailField(
         source="user.email",
@@ -25,8 +82,14 @@ class ComplaintSerializer(serializers.ModelSerializer):
         read_only=True,
     )
 
+    ai_analysis = ComplaintAnalysisSerializer(
+        source="analysis",
+        read_only=True,
+    )
+
     class Meta:
         model = Complaint
+
         fields = [
             "id",
             "ticket_number",
@@ -46,6 +109,7 @@ class ComplaintSerializer(serializers.ModelSerializer):
             "updated_at",
             "resolved_at",
             "closed_at",
+            "ai_analysis",
         ]
 
         read_only_fields = [
@@ -61,6 +125,7 @@ class ComplaintSerializer(serializers.ModelSerializer):
             "updated_at",
             "resolved_at",
             "closed_at",
+            "ai_analysis",
         ]
 
     def validate_title(self, value):
@@ -124,75 +189,6 @@ class ComplaintSerializer(serializers.ModelSerializer):
         return value
 
 
-class ComplaintAnalysisSerializer(
-    serializers.ModelSerializer
-):
-    complaint_ticket_number = serializers.CharField(
-        source="complaint.ticket_number",
-        read_only=True,
-    )
-
-    predicted_category_name = serializers.CharField(
-        source="predicted_category.name",
-        read_only=True,
-    )
-
-    predicted_department_name = serializers.CharField(
-        source="predicted_department.name",
-        read_only=True,
-    )
-
-    class Meta:
-        model = ComplaintAnalysis
-        fields = [
-            "id",
-            "complaint",
-            "complaint_ticket_number",
-            "summary",
-            "predicted_category",
-            "predicted_category_name",
-            "predicted_department",
-            "predicted_department_name",
-            "predicted_priority",
-            "urgency_score",
-            "confidence_score",
-            "model_name",
-            "created_at",
-            "updated_at",
-        ]
-
-        read_only_fields = [
-            "id",
-            "complaint_ticket_number",
-            "predicted_category_name",
-            "predicted_department_name",
-            "created_at",
-            "updated_at",
-        ]
-
-    def validate_urgency_score(self, value):
-        if value is None:
-            return value
-
-        if value < 0 or value > 100:
-            raise serializers.ValidationError(
-                "Urgency score must be between 0 and 100."
-            )
-
-        return value
-
-    def validate_confidence_score(self, value):
-        if value is None:
-            return value
-
-        if value < 0 or value > 100:
-            raise serializers.ValidationError(
-                "Confidence score must be between 0 and 100."
-            )
-
-        return value
-
-
 class ComplaintAssignmentSerializer(
     serializers.ModelSerializer
 ):
@@ -236,6 +232,7 @@ class ComplaintAssignmentSerializer(
             "officer_email",
             "department_name",
         ]
+
 
 class ComplaintSLASerializer(serializers.ModelSerializer):
     complaint_ticket_number = serializers.CharField(
@@ -296,6 +293,8 @@ class ComplaintSLASerializer(serializers.ModelSerializer):
         ]
 
         read_only_fields = fields
+
+
 class ComplaintHistorySerializer(
     serializers.ModelSerializer
 ):
