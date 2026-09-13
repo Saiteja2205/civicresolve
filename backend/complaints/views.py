@@ -1,6 +1,7 @@
 from django.db import models, transaction
 from django.utils import timezone
 from rest_framework import generics
+from rest_framework import serializers
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -673,38 +674,31 @@ class ComplaintAssignmentViewSet(
         return queryset
 
     def perform_create(self, serializer):
-        officer = (
-            serializer.validated_data.get(
-                "officer"
-            )
+        officer = serializer.validated_data.get(
+            "officer"
         )
 
-        department = (
-            serializer.validated_data.get(
-                "department"
-            )
+        department = serializer.validated_data.get(
+            "department"
         )
 
         if officer is None:
-            raise ValueError(
+            raise serializers.ValidationError(
                 "Officer is required."
             )
 
         if officer.role != "OFFICER":
-            raise ValueError(
+            raise serializers.ValidationError(
                 "Selected user is not an officer."
             )
 
         if department is None:
-            raise ValueError(
+            raise serializers.ValidationError(
                 "Department is required."
             )
 
-        if (
-            officer.department_id
-            != department.id
-        ):
-            raise ValueError(
+        if officer.department_id != department.id:
+            raise serializers.ValidationError(
                 "Officer does not belong "
                 "to the selected department."
             )
