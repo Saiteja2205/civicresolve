@@ -224,6 +224,17 @@ export async function getComplaintSLARisk(
 }
 
 
+export async function getComplaintResolutionAssistant(
+  complaintId,
+) {
+  const response = await api.post(
+    `/complaints/${complaintId}/resolution-assistant/`,
+  );
+
+  return response.data;
+}
+
+
 export async function reopenComplaint(
   complaintId,
   comment,

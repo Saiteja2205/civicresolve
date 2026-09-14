@@ -10,6 +10,7 @@ import {
   getComplaint,
   getComplaintAssignments,
   getComplaintHistory,
+  getComplaintResolutionAssistant,
   getComplaintSLARisk,
   getDepartments,
   getOfficers,
@@ -21,6 +22,7 @@ import ComplaintPriorityBadge from "../components/ComplaintPriorityBadge.jsx";
 import ComplaintStatusBadge from "../components/ComplaintStatusBadge.jsx";
 import ComplaintEvidencePanel from "../components/ComplaintEvidencePanel.jsx";
 import ComplaintSLARiskPanel from "../components/ComplaintSLARiskPanel.jsx";
+import AIResolutionAssistantPanel from "../components/AIResolutionAssistantPanel.jsx";
 import CitizenResolutionFeedback from "../components/CitizenResolutionFeedback.jsx";
 
 import "../styles/complaints.css";
@@ -29,6 +31,7 @@ import "../styles/admin-actions.css";
 import "../styles/admin-assignment.css";
 import "../styles/citizen-resolution.css";
 import "../styles/complaint-sla-risk.css";
+import "../styles/ai-resolution-assistant.css";
 
 
 function getBackPath(role) {
@@ -117,31 +120,6 @@ function getApiErrorMessage(requestError) {
   }
 
   return "Unable to update the complaint.";
-}
-
-
-function getSLARiskErrorMessage(requestError) {
-  const responseData =
-    requestError?.response?.data;
-
-  if (typeof responseData === "string") {
-    return responseData;
-  }
-
-  if (responseData?.detail) {
-    return responseData.detail;
-  }
-
-  if (
-    responseData &&
-    typeof responseData === "object"
-  ) {
-    return Object.values(responseData)
-      .flat()
-      .join(" ");
-  }
-
-  return "The predictive SLA risk could not be calculated.";
 }
 
 
@@ -250,9 +228,8 @@ function ComplaintDetailPage() {
       setSLARisk(null);
 
       setSLARiskError(
-        getSLARiskErrorMessage(
-          requestError,
-        ),
+        requestError?.response?.data?.detail ||
+          "The predictive SLA risk could not be calculated.",
       );
     } finally {
       setSLARiskLoading(false);
@@ -592,6 +569,15 @@ function ComplaintDetailPage() {
   }
 
 
+  async function handleGenerateResolutionAssistant(
+    id,
+  ) {
+    return getComplaintResolutionAssistant(
+      id,
+    );
+  }
+
+
   if (loading) {
     return (
       <section className="complaint-detail-page">
@@ -670,6 +656,22 @@ function ComplaintDetailPage() {
     );
 
 
+  const canUseResolutionAssistant =
+    isAdmin ||
+    (
+      isOfficer &&
+      [
+        "ASSIGNED",
+        "ACKNOWLEDGED",
+        "IN_PROGRESS",
+        "NEEDS_INFORMATION",
+        "ESCALATED",
+      ].includes(
+        complaint.status,
+      )
+    );
+
+
   const activeAssignment =
     assignments.find(
       (assignment) =>
@@ -738,6 +740,17 @@ function ComplaintDetailPage() {
           loadSLARisk(
             complaint.id,
           )
+        }
+      />
+
+
+      <AIResolutionAssistantPanel
+        complaintId={complaint.id}
+        canUseAssistant={
+          canUseResolutionAssistant
+        }
+        onGenerated={
+          handleGenerateResolutionAssistant
         }
       />
 
