@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import {
@@ -7,9 +7,12 @@ import {
 } from "../services/complaintService.js";
 
 import "../styles/complaint-form.css";
+import "../styles/voice-input.css";
 
 function ComplaintCreatePage() {
   const navigate = useNavigate();
+
+  const recognitionRef = useRef(null);
 
   const [categories, setCategories] = useState([]);
   const [form, setForm] = useState({
@@ -25,6 +28,11 @@ function ComplaintCreatePage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
+
+  const [speechSupported, setSpeechSupported] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [speechError, setSpeechError] = useState("");
+  const [voiceInterimText, setVoiceInterimText] = useState("");
 
   useEffect(() => {
     async function loadCategories() {
@@ -56,6 +64,124 @@ function ComplaintCreatePage() {
     loadCategories();
   }, []);
 
+  useEffect(() => {
+    const SpeechRecognition =
+      window.SpeechRecognition ||
+      window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      setSpeechSupported(false);
+      return undefined;
+    }
+
+    setSpeechSupported(true);
+
+    const recognition = new SpeechRecognition();
+
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "en-IN";
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => {
+      setIsListening(true);
+      setSpeechError("");
+      setVoiceInterimText("");
+    };
+
+    recognition.onresult = (event) => {
+      let finalText = "";
+      let interimText = "";
+
+      for (
+        let index = event.resultIndex;
+        index < event.results.length;
+        index += 1
+      ) {
+        const transcript =
+          event.results[index][0].transcript;
+
+        if (event.results[index].isFinal) {
+          finalText += transcript;
+        } else {
+          interimText += transcript;
+        }
+      }
+
+      if (finalText.trim()) {
+        setForm((current) => {
+          const existingDescription =
+            current.description.trim();
+
+          const separator =
+            existingDescription ? " " : "";
+
+          return {
+            ...current,
+            description:
+              existingDescription +
+              separator +
+              finalText.trim(),
+          };
+        });
+
+        setFieldErrors((current) => ({
+          ...current,
+          description: "",
+        }));
+
+        setError("");
+      }
+
+      setVoiceInterimText(interimText.trim());
+    };
+
+    recognition.onerror = (event) => {
+      console.error(
+        "Speech recognition error:",
+        event.error,
+      );
+
+      setIsListening(false);
+
+      if (event.error === "not-allowed") {
+        setSpeechError(
+          "Microphone access was denied. Allow microphone permission and try again.",
+        );
+      } else if (event.error === "no-speech") {
+        setSpeechError(
+          "No speech was detected. Please try speaking again.",
+        );
+      } else if (event.error === "audio-capture") {
+        setSpeechError(
+          "No microphone was detected. Check your microphone and try again.",
+        );
+      } else if (event.error === "network") {
+        setSpeechError(
+          "Speech recognition could not connect. Check your internet connection and try again.",
+        );
+      } else {
+        setSpeechError(
+          "Voice input encountered an error. Please try again.",
+        );
+      }
+
+      setVoiceInterimText("");
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+      setVoiceInterimText("");
+    };
+
+    recognitionRef.current = recognition;
+
+    return () => {
+      recognition.stop();
+      recognitionRef.current = null;
+    };
+  }, []);
+
   function handleChange(event) {
     const { name, value } = event.target;
 
@@ -70,6 +196,79 @@ function ComplaintCreatePage() {
     }));
 
     setError("");
+
+    if (name === "description") {
+      setSpeechError("");
+    }
+  }
+
+  function startVoiceInput() {
+    if (!speechSupported) {
+      setSpeechError(
+        "Voice input is not supported in this browser. Please use Chrome or Edge.",
+      );
+      return;
+    }
+
+    if (!recognitionRef.current) {
+      setSpeechError(
+        "Voice input is not ready. Please refresh the page and try again.",
+      );
+      return;
+    }
+
+    if (isListening) {
+      return;
+    }
+
+    setSpeechError("");
+    setVoiceInterimText("");
+
+    try {
+      recognitionRef.current.start();
+    } catch (recognitionError) {
+      console.error(
+        "Unable to start speech recognition:",
+        recognitionError,
+      );
+
+      setSpeechError(
+        "Unable to start voice input. Please try again.",
+      );
+    }
+  }
+
+  function stopVoiceInput() {
+    if (!recognitionRef.current) {
+      return;
+    }
+
+    try {
+      recognitionRef.current.stop();
+    } catch (recognitionError) {
+      console.error(
+        "Unable to stop speech recognition:",
+        recognitionError,
+      );
+    }
+
+    setIsListening(false);
+    setVoiceInterimText("");
+  }
+
+  function clearVoiceTranscript() {
+    setForm((current) => ({
+      ...current,
+      description: "",
+    }));
+
+    setVoiceInterimText("");
+    setSpeechError("");
+
+    setFieldErrors((current) => ({
+      ...current,
+      description: "",
+    }));
   }
 
   function validateForm() {
@@ -164,6 +363,10 @@ function ComplaintCreatePage() {
 
   async function handleSubmit(event) {
     event.preventDefault();
+
+    if (isListening) {
+      stopVoiceInput();
+    }
 
     const validationErrors = validateForm();
 
@@ -301,16 +504,123 @@ function ComplaintCreatePage() {
             </div>
 
             <div className="complaint-field complaint-field-full">
-              <label htmlFor="description">
-                Description
-              </label>
+              <div className="voice-description-header">
+                <label htmlFor="description">
+                  Description
+                </label>
+
+                {speechSupported && (
+                  <span className="voice-supported-label">
+                    Voice input available
+                  </span>
+                )}
+              </div>
+
+              <div
+                className={`voice-input-panel ${
+                  isListening
+                    ? "voice-input-panel-active"
+                    : ""
+                }`}
+              >
+                <div className="voice-input-top">
+                  <div>
+                    <h3>
+                      Speak your complaint
+                    </h3>
+
+                    <p>
+                      You can describe the issue naturally.
+                      The transcript will appear below for
+                      you to review and edit.
+                    </p>
+                  </div>
+
+                  <div className="voice-input-actions">
+                    {!isListening ? (
+                      <button
+                        type="button"
+                        className="voice-start-button"
+                        onClick={startVoiceInput}
+                        disabled={
+                          submitting ||
+                          !speechSupported
+                        }
+                      >
+                        <span aria-hidden="true">
+                          🎙️
+                        </span>
+                        Start voice
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="voice-stop-button"
+                        onClick={stopVoiceInput}
+                        disabled={submitting}
+                      >
+                        <span
+                          className="voice-recording-dot"
+                          aria-hidden="true"
+                        />
+                        Stop listening
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {!speechSupported && (
+                  <p
+                    className="voice-browser-warning"
+                    role="status"
+                  >
+                    Voice input is not supported in this
+                    browser. Use Chrome or Edge for voice
+                    complaint submission.
+                  </p>
+                )}
+
+                {isListening && (
+                  <div
+                    className="voice-listening-status"
+                    role="status"
+                    aria-live="polite"
+                  >
+                    <span
+                      className="voice-pulse"
+                      aria-hidden="true"
+                    />
+
+                    Listening... Speak clearly about the
+                    problem.
+                  </div>
+                )}
+
+                {voiceInterimText && (
+                  <div className="voice-interim-text">
+                    <span>Live transcript:</span>{" "}
+                    {voiceInterimText}
+                  </div>
+                )}
+
+                {form.description.trim() && (
+                  <button
+                    type="button"
+                    className="voice-clear-button"
+                    onClick={clearVoiceTranscript}
+                    disabled={submitting}
+                  >
+                    Clear description
+                  </button>
+                )}
+              </div>
 
               <textarea
                 id="description"
                 name="description"
                 value={form.description}
                 onChange={handleChange}
-                placeholder="Describe the problem, when it started, and any useful details."
+                placeholder="Describe the problem, when it started, and any useful details — or use voice input above."
                 rows={7}
                 disabled={submitting}
               />
@@ -324,6 +634,15 @@ function ComplaintCreatePage() {
                   {form.description.length} characters
                 </span>
               </div>
+
+              {speechError && (
+                <p
+                  className="voice-error"
+                  role="alert"
+                >
+                  {speechError}
+                </p>
+              )}
 
               {fieldErrors.description && (
                 <p className="complaint-field-error">

@@ -1,5 +1,6 @@
-from django.conf import settings
+import time
 
+from django.conf import settings
 from google import genai
 from google.genai import types
 
@@ -31,9 +32,22 @@ class AIProvider:
 class GeminiProvider(AIProvider):
     """
     Gemini implementation of the CivicResolve AI provider.
+
+    Uses a small fallback chain so temporary model unavailability
+    does not unnecessarily break complaint processing.
     """
 
-    model_name = "gemini-3.8-flash"
+    PRIMARY_MODEL = "gemini-3.8-flash"
+
+    FALLBACK_MODELS = (
+        "gemini-3.7-flash",
+        "gemini-3.5-flash-lite",
+    )
+
+    MAX_ATTEMPTS_PER_MODEL = 2
+    RETRY_DELAY_SECONDS = 2
+
+    model_name = PRIMARY_MODEL
 
     def __init__(self):
         api_key = settings.GEMINI_API_KEY
@@ -47,35 +61,109 @@ class GeminiProvider(AIProvider):
             api_key=api_key
         )
 
-    def analyze_complaint(self, prompt):
+    @staticmethod
+    def _is_retryable_error(exc):
         """
-        Send a complaint-analysis prompt to Gemini
-        and return the generated JSON text.
+        Return True for temporary provider/service failures.
         """
+        message = str(exc).lower()
 
-        try:
-            response = self.client.models.generate_content(
-                model=self.model_name,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                ),
+        retryable_markers = (
+            "503",
+            "unavailable",
+            "429",
+            "resource_exhausted",
+            "500",
+            "502",
+            "504",
+            "internal",
+            "deadline",
+            "temporarily",
+        )
+
+        return any(
+            marker in message
+            for marker in retryable_markers
+        )
+
+    def _generate_content(self, model, prompt):
+        """
+        Send one request to Gemini using the supplied model.
+        """
+        response = self.client.models.generate_content(
+            model=model,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+            ),
+        )
+
+        if not response.text:
+            raise AIProviderError(
+                f"Gemini returned an empty response "
+                f"from model '{model}'."
             )
 
-            if not response.text:
-                raise AIProviderError(
-                    "Gemini returned an empty response."
-                )
+        return response.text
 
-            return response.text
+    def analyze_complaint(self, prompt):
+        """
+        Analyze a complaint using Gemini with retry and
+        model fallback handling.
+        """
+        models = (
+            self.PRIMARY_MODEL,
+            *self.FALLBACK_MODELS,
+        )
 
-        except AIProviderError:
-            raise
+        errors = []
 
-        except Exception as exc:
-            raise AIProviderError(
-                f"Gemini request failed: {exc}"
-            ) from exc
+        for model in models:
+            for attempt in range(
+                1,
+                self.MAX_ATTEMPTS_PER_MODEL + 1,
+            ):
+                try:
+                    response_text = self._generate_content(
+                        model,
+                        prompt,
+                    )
+
+                    self.model_name = model
+
+                    return response_text
+
+                except AIProviderError as exc:
+                    errors.append(
+                        f"{model} attempt {attempt}: {exc}"
+                    )
+
+                    if not self._is_retryable_error(exc):
+                        raise
+
+                except Exception as exc:
+                    wrapped_error = AIProviderError(
+                        f"Gemini request failed for "
+                        f"model '{model}': {exc}"
+                    )
+
+                    errors.append(
+                        f"{model} attempt {attempt}: "
+                        f"{wrapped_error}"
+                    )
+
+                    if not self._is_retryable_error(exc):
+                        raise wrapped_error from exc
+
+                if attempt < self.MAX_ATTEMPTS_PER_MODEL:
+                    time.sleep(
+                        self.RETRY_DELAY_SECONDS
+                    )
+
+        raise AIProviderError(
+            "All configured Gemini models failed. "
+            + " | ".join(errors)
+        )
 
 
 class PlaceholderAIProvider(AIProvider):
@@ -92,15 +180,10 @@ class PlaceholderAIProvider(AIProvider):
         """
         Return a predictable response for testing.
         """
-
         return {
             "summary": (
                 "AI analysis is currently using the "
                 "CivicResolve placeholder provider."
-            ),
-            "explanation": (
-                "The placeholder provider returned a predictable "
-                "medium-priority result for development and testing."
             ),
             "predicted_category": None,
             "predicted_department": None,
