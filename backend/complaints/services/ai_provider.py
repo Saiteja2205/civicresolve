@@ -45,8 +45,10 @@ class GeminiProvider(AIProvider):
     - Text-based complaint analysis
     - Multimodal image/evidence analysis
 
-    Uses retry and model fallback handling for temporary
-    provider/service failures.
+    Uses:
+    - Request timeout protection
+    - Retry handling
+    - Model fallback handling
     """
 
     PRIMARY_MODEL = "gemini-3.8-flash"
@@ -59,6 +61,9 @@ class GeminiProvider(AIProvider):
     MAX_ATTEMPTS_PER_MODEL = 2
     RETRY_DELAY_SECONDS = 2
 
+    # Google GenAI SDK expects this value in milliseconds.
+    REQUEST_TIMEOUT_MS = 60000
+
     model_name = PRIMARY_MODEL
 
     def __init__(self):
@@ -70,7 +75,10 @@ class GeminiProvider(AIProvider):
             )
 
         self.client = genai.Client(
-            api_key=api_key
+            api_key=api_key,
+            http_options=types.HttpOptions(
+                timeout=self.REQUEST_TIMEOUT_MS,
+            ),
         )
 
     @staticmethod
@@ -78,6 +86,7 @@ class GeminiProvider(AIProvider):
         """
         Return True for temporary provider/service failures.
         """
+
         message = str(exc).lower()
 
         retryable_markers = (
@@ -91,6 +100,8 @@ class GeminiProvider(AIProvider):
             "internal",
             "deadline",
             "temporarily",
+            "timeout",
+            "timed out",
         )
 
         return any(
@@ -98,17 +109,52 @@ class GeminiProvider(AIProvider):
             for marker in retryable_markers
         )
 
-    def _generate_content(self, model, prompt):
+    @staticmethod
+    def _format_request_error(
+        model,
+        exc,
+    ):
+        """
+        Convert a low-level Gemini/network exception into
+        a useful CivicResolve AIProviderError.
+        """
+
+        message = str(exc).strip()
+
+        if not message:
+            message = exc.__class__.__name__
+
+        return AIProviderError(
+            f"Gemini request failed for model "
+            f"'{model}': {message}"
+        )
+
+    def _generate_content(
+        self,
+        model,
+        prompt,
+    ):
         """
         Send one text request to Gemini.
+
+        The client-level HTTP timeout prevents an individual
+        network request from waiting indefinitely.
         """
-        response = self.client.models.generate_content(
-            model=model,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-            ),
-        )
+
+        try:
+            response = self.client.models.generate_content(
+                model=model,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                ),
+            )
+
+        except Exception as exc:
+            raise self._format_request_error(
+                model=model,
+                exc=exc,
+            ) from exc
 
         if not response.text:
             raise AIProviderError(
@@ -128,21 +174,29 @@ class GeminiProvider(AIProvider):
         """
         Send one multimodal image request to Gemini.
         """
+
         image_part = types.Part.from_bytes(
             data=image_bytes,
             mime_type=mime_type,
         )
 
-        response = self.client.models.generate_content(
-            model=model,
-            contents=[
-                prompt,
-                image_part,
-            ],
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-            ),
-        )
+        try:
+            response = self.client.models.generate_content(
+                model=model,
+                contents=[
+                    prompt,
+                    image_part,
+                ],
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                ),
+            )
+
+        except Exception as exc:
+            raise AIProviderError(
+                f"Gemini image request failed for model "
+                f"'{model}': {str(exc)}"
+            ) from exc
 
         if not response.text:
             raise AIProviderError(
@@ -157,6 +211,7 @@ class GeminiProvider(AIProvider):
         Analyze a complaint using Gemini with retry and
         model fallback handling.
         """
+
         models = (
             self.PRIMARY_MODEL,
             *self.FALLBACK_MODELS,
@@ -170,9 +225,11 @@ class GeminiProvider(AIProvider):
                 self.MAX_ATTEMPTS_PER_MODEL + 1,
             ):
                 try:
-                    response_text = self._generate_content(
-                        model,
-                        prompt,
+                    response_text = (
+                        self._generate_content(
+                            model,
+                            prompt,
+                        )
                     )
 
                     self.model_name = model
@@ -181,16 +238,21 @@ class GeminiProvider(AIProvider):
 
                 except AIProviderError as exc:
                     errors.append(
-                        f"{model} attempt {attempt}: {exc}"
+                        f"{model} attempt {attempt}: "
+                        f"{exc}"
                     )
 
-                    if not self._is_retryable_error(exc):
+                    if not self._is_retryable_error(
+                        exc
+                    ):
                         raise
 
                 except Exception as exc:
-                    wrapped_error = AIProviderError(
-                        f"Gemini request failed for "
-                        f"model '{model}': {exc}"
+                    wrapped_error = (
+                        self._format_request_error(
+                            model=model,
+                            exc=exc,
+                        )
                     )
 
                     errors.append(
@@ -198,7 +260,9 @@ class GeminiProvider(AIProvider):
                         f"{wrapped_error}"
                     )
 
-                    if not self._is_retryable_error(exc):
+                    if not self._is_retryable_error(
+                        exc
+                    ):
                         raise wrapped_error from exc
 
                 if attempt < self.MAX_ATTEMPTS_PER_MODEL:
@@ -221,6 +285,7 @@ class GeminiProvider(AIProvider):
         Analyze complaint evidence using Gemini vision
         with retry and model fallback handling.
         """
+
         if not image_bytes:
             raise AIProviderError(
                 "Image data is empty."
@@ -263,13 +328,17 @@ class GeminiProvider(AIProvider):
                         f"{attempt}: {exc}"
                     )
 
-                    if not self._is_retryable_error(exc):
+                    if not self._is_retryable_error(
+                        exc
+                    ):
                         raise
 
                 except Exception as exc:
-                    wrapped_error = AIProviderError(
-                        f"Gemini image request failed "
-                        f"for model '{model}': {exc}"
+                    wrapped_error = (
+                        self._format_request_error(
+                            model=model,
+                            exc=exc,
+                        )
                     )
 
                     errors.append(
@@ -277,7 +346,9 @@ class GeminiProvider(AIProvider):
                         f"{attempt}: {wrapped_error}"
                     )
 
-                    if not self._is_retryable_error(exc):
+                    if not self._is_retryable_error(
+                        exc
+                    ):
                         raise wrapped_error from exc
 
                 if attempt < self.MAX_ATTEMPTS_PER_MODEL:
@@ -306,6 +377,7 @@ class PlaceholderAIProvider(AIProvider):
         """
         Return a predictable response for testing.
         """
+
         return {
             "summary": (
                 "AI analysis is currently using the "
@@ -326,8 +398,9 @@ class PlaceholderAIProvider(AIProvider):
     ):
         """
         Return a predictable image-analysis response
-        for automated testing.
+        for automated evidence testing.
         """
+
         return {
             "evidence_type": "OTHER",
             "observations": (
