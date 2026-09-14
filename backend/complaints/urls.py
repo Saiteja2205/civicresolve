@@ -2,6 +2,7 @@ from django.urls import path
 from rest_framework.routers import DefaultRouter
 
 from .resolution_views import ComplaintReopenView
+from .sla_risk_views import ComplaintSLARiskView
 from .views import (
     ComplaintAssignmentViewSet,
     ComplaintDuplicateViewSet,
@@ -50,6 +51,11 @@ urlpatterns = [
         "complaints/<int:complaint_id>/reopen/",
         ComplaintReopenView.as_view(),
         name="complaint-reopen",
+    ),
+    path(
+        "complaints/<int:complaint_id>/sla-risk/",
+        ComplaintSLARiskView.as_view(),
+        name="complaint-sla-risk",
     ),
     path(
         "activity/",
