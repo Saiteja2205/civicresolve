@@ -20,6 +20,7 @@ from .models import (
     ComplaintAnalysis,
     ComplaintAssignment,
     ComplaintDuplicate,
+    ComplaintEvidence,
     ComplaintHistory,
     ComplaintSLA,
 )
@@ -29,6 +30,7 @@ from .serializers import (
     ComplaintAnalysisSerializer,
     ComplaintAssignmentSerializer,
     ComplaintDuplicateSerializer,
+    ComplaintEvidenceSerializer,
     ComplaintHistorySerializer,
     ComplaintSLASerializer,
 )
@@ -40,7 +42,10 @@ from complaints.services.complaint_creation_service import (
 from complaints.services.complaint_service import (
     change_complaint_status,
 )
-
+from complaints.services.evidence_ai_service import (
+    EvidenceAIAnalysisError,
+    analyze_evidence,
+)
 from organizations.models import Department
 
 
@@ -997,4 +1002,183 @@ class UserActivityListView(generics.ListAPIView):
             complaint__user=user,
         ).order_by(
             "-created_at"
+        )
+
+class ComplaintEvidenceViewSet(
+    viewsets.ModelViewSet
+):
+    """
+    API for complaint evidence images.
+
+    Citizens can upload evidence only to their own complaints.
+    Administrators and assigned officers can view evidence.
+    Evidence is automatically analyzed using Gemini Vision.
+    """
+
+    serializer_class = ComplaintEvidenceSerializer
+    permission_classes = [
+        IsAuthenticated,
+    ]
+
+    queryset = (
+        ComplaintEvidence.objects
+        .select_related(
+            "complaint",
+            "complaint__user",
+            "complaint__category",
+            "complaint__category__department",
+            "uploaded_by",
+        )
+        .all()
+    )
+
+    def get_queryset(self):
+        user = self.request.user
+
+        if user.role == User.Role.ADMIN:
+            queryset = self.queryset
+
+        elif user.role == User.Role.OFFICER:
+            queryset = self.queryset.filter(
+                complaint__assignments__officer=user,
+                complaint__assignments__unassigned_at__isnull=True,
+            ).distinct()
+
+        else:
+            queryset = self.queryset.filter(
+                complaint__user=user,
+            )
+
+        complaint_id = self.request.query_params.get(
+            "complaint"
+        )
+
+        if complaint_id:
+            queryset = queryset.filter(
+                complaint_id=complaint_id
+            )
+
+        return queryset
+
+    def create(self, request, *args, **kwargs):
+        """
+        Upload one evidence image.
+
+        Only the citizen who owns the complaint can upload
+        evidence.
+        """
+        complaint_id = request.data.get(
+            "complaint"
+        )
+
+        if not complaint_id:
+            return Response(
+                {
+                    "detail": (
+                        "complaint is required."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            complaint = Complaint.objects.get(
+                id=complaint_id
+            )
+        except Complaint.DoesNotExist:
+            return Response(
+                {
+                    "detail": "Complaint not found."
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if request.user.role != User.Role.USER:
+            return Response(
+                {
+                    "detail": (
+                        "Only citizens can upload "
+                        "complaint evidence."
+                    )
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if complaint.user_id != request.user.id:
+            return Response(
+                {
+                    "detail": (
+                        "You can upload evidence only "
+                        "to your own complaints."
+                    )
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        serializer = self.get_serializer(
+            data=request.data
+        )
+
+        serializer.is_valid(
+            raise_exception=True
+        )
+
+        evidence = serializer.save(
+            complaint=complaint,
+            uploaded_by=request.user,
+        )
+
+        analysis_status = "completed"
+
+        try:
+            analyze_evidence(evidence)
+
+        except EvidenceAIAnalysisError:
+            analysis_status = "unavailable"
+
+        evidence.refresh_from_db()
+
+        response_serializer = self.get_serializer(
+            evidence
+        )
+
+        response_data = response_serializer.data
+
+        response_data["analysis_status"] = (
+            analysis_status
+        )
+
+        return Response(
+            response_data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    def destroy(
+        self,
+        request,
+        *args,
+        **kwargs,
+    ):
+        """
+        Evidence cannot be deleted by citizens.
+
+        Administrators may remove evidence when required.
+        """
+        if request.user.role != User.Role.ADMIN:
+            return Response(
+                {
+                    "detail": (
+                        "Only administrators can "
+                        "delete complaint evidence."
+                    )
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        evidence = self.get_object()
+
+        evidence.delete()
+
+        return Response(
+            status=status.HTTP_204_NO_CONTENT
         )

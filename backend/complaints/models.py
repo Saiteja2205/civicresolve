@@ -463,3 +463,112 @@ class ComplaintDuplicate(models.Model):
             f"{self.possible_duplicate.ticket_number} "
             f"({self.similarity_score})"
         )
+
+class ComplaintEvidence(models.Model):
+    """
+    Image evidence attached to a complaint.
+
+    Each complaint can contain multiple evidence images.
+    AI analysis is stored as structured metadata so the original
+    evidence remains available independently of the AI result.
+    """
+
+    class EvidenceType(models.TextChoices):
+        ROAD_DAMAGE = "ROAD_DAMAGE", "Road Damage"
+        WATER_LEAKAGE = "WATER_LEAKAGE", "Water Leakage"
+        GARBAGE = "GARBAGE", "Garbage / Waste"
+        STREET_LIGHTING = "STREET_LIGHTING", "Street Lighting"
+        ELECTRICITY = "ELECTRICITY", "Electricity"
+        PUBLIC_SAFETY = "PUBLIC_SAFETY", "Public Safety"
+        SANITATION = "SANITATION", "Sanitation"
+        OTHER = "OTHER", "Other"
+
+    complaint = models.ForeignKey(
+        Complaint,
+        on_delete=models.CASCADE,
+        related_name="evidence",
+    )
+
+    image = models.ImageField(
+        upload_to="complaint-evidence/%Y/%m/%d/",
+    )
+
+    original_filename = models.CharField(
+        max_length=255,
+    )
+
+    content_type = models.CharField(
+        max_length=100,
+    )
+
+    file_size = models.PositiveIntegerField()
+
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="uploaded_complaint_evidence",
+    )
+
+    uploaded_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    # AI analysis fields
+
+    analysis_completed = models.BooleanField(
+        default=False,
+    )
+
+    evidence_type = models.CharField(
+        max_length=30,
+        choices=EvidenceType.choices,
+        blank=True,
+    )
+
+    observations = models.TextField(
+        blank=True,
+    )
+
+    severity_score = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+
+    confidence_score = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+
+    complaint_consistency = models.BooleanField(
+        null=True,
+        blank=True,
+    )
+
+    analysis_explanation = models.TextField(
+        blank=True,
+    )
+
+    analysis_model = models.CharField(
+        max_length=100,
+        blank=True,
+    )
+
+    analyzed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        ordering = ["-uploaded_at"]
+
+    def __str__(self):
+        return (
+            f"Evidence for {self.complaint.ticket_number} - "
+            f"{self.original_filename}"
+        )

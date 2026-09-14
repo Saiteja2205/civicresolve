@@ -18,6 +18,7 @@ import {
 
 import ComplaintPriorityBadge from "../components/ComplaintPriorityBadge.jsx";
 import ComplaintStatusBadge from "../components/ComplaintStatusBadge.jsx";
+import ComplaintEvidencePanel from "../components/ComplaintEvidencePanel.jsx";
 import CitizenResolutionFeedback from "../components/CitizenResolutionFeedback.jsx";
 
 import "../styles/complaints.css";
@@ -183,7 +184,6 @@ function ComplaintDetailPage() {
 
   const [selectedOfficer, setSelectedOfficer] =
     useState("");
-
 
   const isOfficer =
     user?.role === "OFFICER";
@@ -627,7 +627,6 @@ function ComplaintDetailPage() {
           </p>
         </div>
 
-
         <div className="complaint-detail-badges">
           <ComplaintStatusBadge
             status={
@@ -646,7 +645,6 @@ function ComplaintDetailPage() {
 
       {canManageAssignment && (
         <section className="admin-assignment-card">
-
           <div className="admin-assignment-header">
             <div>
               <p className="admin-assignment-eyebrow">
@@ -663,7 +661,6 @@ function ComplaintDetailPage() {
                 active officer when necessary.
               </p>
             </div>
-
 
             {!showAssignmentBox && (
               <button
@@ -689,7 +686,6 @@ function ComplaintDetailPage() {
 
           {activeAssignment && (
             <div className="admin-current-assignment">
-
               <span>
                 Currently assigned to
               </span>
@@ -703,14 +699,12 @@ function ComplaintDetailPage() {
                 {activeAssignment.department_name ||
                   "Department unavailable"}
               </small>
-
             </div>
           )}
 
 
           {showAssignmentBox && (
             <div className="admin-assignment-form">
-
               <div className="admin-assignment-field">
                 <label htmlFor="assignment-department">
                   Department
@@ -773,8 +767,7 @@ function ComplaintDetailPage() {
                   <option value="">
                     {!selectedDepartment
                       ? "Select department first"
-                      : officers.length ===
-                          0
+                      : officers.length === 0
                         ? "No active officers"
                         : "Select officer"}
                   </option>
@@ -808,7 +801,6 @@ function ComplaintDetailPage() {
 
 
               <div className="admin-assignment-buttons">
-
                 <button
                   type="button"
                   className="admin-assignment-cancel"
@@ -838,7 +830,6 @@ function ComplaintDetailPage() {
                   Cancel
                 </button>
 
-
                 <button
                   type="button"
                   className="admin-assignment-primary"
@@ -855,21 +846,16 @@ function ComplaintDetailPage() {
                       ? "Confirm reassignment"
                       : "Confirm assignment"}
                 </button>
-
               </div>
-
             </div>
           )}
-
         </section>
       )}
 
 
       {canTakeOfficerAction && (
         <section className="complaint-action-card">
-
           <div className="complaint-action-content">
-
             <p className="complaint-action-eyebrow">
               OFFICER ACTION
             </p>
@@ -881,7 +867,6 @@ function ComplaintDetailPage() {
             <p>
               {actionDescription}
             </p>
-
           </div>
 
 
@@ -899,7 +884,6 @@ function ComplaintDetailPage() {
             </button>
           ) : (
             <div className="complaint-action-box">
-
               <label htmlFor="action-comment">
                 Comment
                 <span>
@@ -939,7 +923,6 @@ function ComplaintDetailPage() {
 
 
               <div className="complaint-action-buttons">
-
                 <button
                   type="button"
                   className="complaint-action-cancel"
@@ -961,7 +944,6 @@ function ComplaintDetailPage() {
                   Cancel
                 </button>
 
-
                 <button
                   type="button"
                   className="complaint-action-primary"
@@ -976,21 +958,16 @@ function ComplaintDetailPage() {
                     ? "Updating..."
                     : `Confirm: ${actionLabel}`}
                 </button>
-
               </div>
-
             </div>
           )}
-
         </section>
       )}
 
 
       {canCloseComplaint && (
         <section className="admin-close-card">
-
           <div className="admin-close-content">
-
             <p className="admin-close-eyebrow">
               ADMINISTRATOR ACTION
             </p>
@@ -1004,7 +981,6 @@ function ComplaintDetailPage() {
               by the officer. Closing it will
               complete the complaint lifecycle.
             </p>
-
           </div>
 
 
@@ -1026,7 +1002,6 @@ function ComplaintDetailPage() {
             </button>
           ) : (
             <div className="admin-close-box">
-
               <label htmlFor="close-comment">
                 Closing comment
                 <span>
@@ -1061,7 +1036,6 @@ function ComplaintDetailPage() {
 
 
               <div className="admin-close-buttons">
-
                 <button
                   type="button"
                   className="admin-close-cancel"
@@ -1083,7 +1057,6 @@ function ComplaintDetailPage() {
                   Cancel
                 </button>
 
-
                 <button
                   type="button"
                   className="admin-close-primary"
@@ -1098,17 +1071,12 @@ function ComplaintDetailPage() {
                     ? "Closing..."
                     : "Confirm: Close complaint"}
                 </button>
-
               </div>
-
             </div>
           )}
-
         </section>
       )}
 
-
-      {/* DAY 11 — CITIZEN RESOLUTION FEEDBACK */}
 
       {isCitizen &&
         complaint.status === "RESOLVED" && (
@@ -1128,7 +1096,6 @@ function ComplaintDetailPage() {
         <div className="complaint-detail-main">
 
           <article className="complaint-detail-card">
-
             <div className="complaint-detail-card-header">
               <h2>
                 Description
@@ -1138,14 +1105,17 @@ function ComplaintDetailPage() {
             <div className="complaint-description">
               {complaint.description}
             </div>
-
           </article>
 
 
+          <ComplaintEvidencePanel
+            complaint={complaint}
+            isCitizen={isCitizen}
+          />
+
+
           <article className="complaint-detail-card">
-
             <div className="complaint-detail-card-header">
-
               <h2>
                 Status history
               </h2>
@@ -1153,7 +1123,6 @@ function ComplaintDetailPage() {
               <span>
                 {history.length} events
               </span>
-
             </div>
 
 
@@ -1163,7 +1132,6 @@ function ComplaintDetailPage() {
               </div>
             ) : (
               <div className="complaint-timeline">
-
                 {history.map(
                   (item, index) => (
                     <div
@@ -1173,14 +1141,10 @@ function ComplaintDetailPage() {
                         `${item.created_at}-${index}`
                       }
                     >
-
                       <div className="complaint-timeline-marker" />
 
-
                       <div className="complaint-timeline-content">
-
                         <div className="complaint-timeline-header">
-
                           <strong>
                             {item.new_status}
                           </strong>
@@ -1190,15 +1154,12 @@ function ComplaintDetailPage() {
                               item.created_at,
                             )}
                           </span>
-
                         </div>
-
 
                         <p>
                           {item.comment ||
                             "Status updated."}
                         </p>
-
 
                         {item.changed_by_email && (
                           <small>
@@ -1208,16 +1169,12 @@ function ComplaintDetailPage() {
                             }
                           </small>
                         )}
-
                       </div>
-
                     </div>
                   ),
                 )}
-
               </div>
             )}
-
           </article>
 
         </div>
@@ -1226,13 +1183,11 @@ function ComplaintDetailPage() {
         <aside className="complaint-detail-sidebar">
 
           <article className="complaint-detail-card">
-
             <div className="complaint-detail-card-header">
               <h2>
                 Complaint information
               </h2>
             </div>
-
 
             <dl className="complaint-info-list">
 
@@ -1324,7 +1279,6 @@ function ComplaintDetailPage() {
               </div>
 
             </dl>
-
           </article>
 
         </aside>
@@ -1335,7 +1289,6 @@ function ComplaintDetailPage() {
       {complaint.status ===
         "RESOLVED" && (
         <div className="complaint-resolution-notice">
-
           <strong>
             Complaint resolved
           </strong>
@@ -1345,7 +1298,6 @@ function ComplaintDetailPage() {
             as resolved and is waiting for
             administrator closure.
           </span>
-
         </div>
       )}
 
@@ -1353,7 +1305,6 @@ function ComplaintDetailPage() {
       {complaint.status ===
         "CLOSED" && (
         <div className="complaint-resolution-notice">
-
           <strong>
             Complaint closed
           </strong>
@@ -1362,7 +1313,6 @@ function ComplaintDetailPage() {
             This complaint has completed its
             resolution lifecycle.
           </span>
-
         </div>
       )}
 
@@ -1370,7 +1320,6 @@ function ComplaintDetailPage() {
       {complaint.status ===
         "REOPENED" && (
         <div className="complaint-resolution-notice">
-
           <strong>
             Complaint reopened
           </strong>
@@ -1381,7 +1330,6 @@ function ComplaintDetailPage() {
             satisfactory. The complaint is
             waiting for reassignment.
           </span>
-
         </div>
       )}
 
@@ -1389,7 +1337,6 @@ function ComplaintDetailPage() {
       {complaint.status ===
         "ESCALATED" && (
         <div className="complaint-escalation-notice">
-
           <strong>
             SLA escalation
           </strong>
@@ -1399,7 +1346,6 @@ function ComplaintDetailPage() {
             resolution SLA and requires
             attention.
           </span>
-
         </div>
       )}
 

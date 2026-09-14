@@ -5,6 +5,7 @@ from .resolution_views import ComplaintReopenView
 from .views import (
     ComplaintAssignmentViewSet,
     ComplaintDuplicateViewSet,
+    ComplaintEvidenceViewSet,
     ComplaintSLAViewSet,
     ComplaintViewSet,
     UserActivityListView,
@@ -35,6 +36,12 @@ router.register(
     r"complaint-duplicates",
     ComplaintDuplicateViewSet,
     basename="complaint-duplicate",
+)
+
+router.register(
+    r"complaint-evidence",
+    ComplaintEvidenceViewSet,
+    basename="complaint-evidence",
 )
 
 

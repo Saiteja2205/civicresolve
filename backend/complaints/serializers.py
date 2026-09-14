@@ -5,9 +5,12 @@ from .models import (
     ComplaintAnalysis,
     ComplaintAssignment,
     ComplaintDuplicate,
+    ComplaintEvidence,
     ComplaintHistory,
     ComplaintSLA,
 )
+
+from .services.evidence_service import validate_evidence_image
 
 
 class ComplaintAnalysisSerializer(
@@ -67,6 +70,119 @@ class ComplaintAnalysisSerializer(
         ]
 
 
+class ComplaintEvidenceSerializer(
+    serializers.ModelSerializer
+):
+    complaint_ticket_number = serializers.CharField(
+        source="complaint.ticket_number",
+        read_only=True,
+    )
+
+    uploaded_by_email = serializers.EmailField(
+        source="uploaded_by.email",
+        read_only=True,
+    )
+
+    image_url = serializers.SerializerMethodField()
+
+    evidence_type_display = serializers.CharField(
+        source="get_evidence_type_display",
+        read_only=True,
+    )
+
+    class Meta:
+        model = ComplaintEvidence
+
+        fields = [
+            "id",
+            "complaint",
+            "complaint_ticket_number",
+            "image",
+            "image_url",
+            "original_filename",
+            "content_type",
+            "file_size",
+            "uploaded_by",
+            "uploaded_by_email",
+            "uploaded_at",
+            "analysis_completed",
+            "evidence_type",
+            "evidence_type_display",
+            "observations",
+            "severity_score",
+            "confidence_score",
+            "complaint_consistency",
+            "analysis_explanation",
+            "analysis_model",
+            "analyzed_at",
+        ]
+
+        read_only_fields = [
+            "id",
+            "complaint_ticket_number",
+            "image_url",
+            "original_filename",
+            "content_type",
+            "file_size",
+            "uploaded_by",
+            "uploaded_by_email",
+            "uploaded_at",
+            "analysis_completed",
+            "evidence_type",
+            "evidence_type_display",
+            "observations",
+            "severity_score",
+            "confidence_score",
+            "complaint_consistency",
+            "analysis_explanation",
+            "analysis_model",
+            "analyzed_at",
+        ]
+
+    def validate_image(self, value):
+        validate_evidence_image(value)
+        return value
+
+    def get_image_url(self, obj):
+        if not obj.image:
+            return None
+
+        request = self.context.get("request")
+
+        image_url = obj.image.url
+
+        if request:
+            return request.build_absolute_uri(
+                image_url
+            )
+
+        return image_url
+
+    def create(self, validated_data):
+        image = validated_data["image"]
+
+        validated_data["original_filename"] = (
+            image.name
+        )
+
+        validated_data["content_type"] = (
+            getattr(
+                image,
+                "content_type",
+                "",
+            )
+            or "application/octet-stream"
+        )
+
+        validated_data["file_size"] = (
+            image.size
+        )
+
+        return super().create(
+            validated_data
+        )
+
+
 class ComplaintSerializer(serializers.ModelSerializer):
     user_email = serializers.EmailField(
         source="user.email",
@@ -85,6 +201,11 @@ class ComplaintSerializer(serializers.ModelSerializer):
 
     ai_analysis = ComplaintAnalysisSerializer(
         source="analysis",
+        read_only=True,
+    )
+
+    evidence = ComplaintEvidenceSerializer(
+        many=True,
         read_only=True,
     )
 
@@ -111,6 +232,7 @@ class ComplaintSerializer(serializers.ModelSerializer):
             "resolved_at",
             "closed_at",
             "ai_analysis",
+            "evidence",
         ]
 
         read_only_fields = [
@@ -127,6 +249,7 @@ class ComplaintSerializer(serializers.ModelSerializer):
             "resolved_at",
             "closed_at",
             "ai_analysis",
+            "evidence",
         ]
 
     def validate_title(self, value):
@@ -417,4 +540,7 @@ class ComplaintDuplicateSerializer(
         ]
 
     def get_similarity_percentage(self, obj):
-        return round(float(obj.similarity_score) * 100, 2)
+        return round(
+            float(obj.similarity_score) * 100,
+            2,
+        )

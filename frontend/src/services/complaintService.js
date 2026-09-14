@@ -101,6 +101,31 @@ export async function createComplaint(
 }
 
 
+export async function uploadComplaintEvidence(
+  complaintId,
+  imageFile,
+) {
+  const formData = new FormData();
+
+  formData.append(
+    "complaint",
+    String(complaintId),
+  );
+
+  formData.append(
+    "image",
+    imageFile,
+  );
+
+  const response = await api.post(
+    "/complaint-evidence/",
+    formData,
+  );
+
+  return response.data;
+}
+
+
 export async function assignComplaint(
   complaintId,
   assignmentData,
@@ -201,6 +226,8 @@ export async function reopenComplaint(
 
   return response.data;
 }
+
+
 export async function getActivity() {
   const response = await api.get(
     "/activity/",
