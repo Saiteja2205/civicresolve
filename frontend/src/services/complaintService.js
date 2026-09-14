@@ -235,6 +235,15 @@ export async function getComplaintResolutionAssistant(
 }
 
 
+export async function runAIEvaluation() {
+  const response = await api.post(
+    "/ai-evaluation/",
+  );
+
+  return response.data;
+}
+
+
 export async function reopenComplaint(
   complaintId,
   comment,

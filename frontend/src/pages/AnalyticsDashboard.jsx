@@ -13,6 +13,7 @@ import {
 
 import ComplaintPriorityBadge from "../components/ComplaintPriorityBadge.jsx";
 import ComplaintStatusBadge from "../components/ComplaintStatusBadge.jsx";
+import AIEvaluationPanel from "../components/AIEvaluationPanel.jsx";
 
 import "../styles/analytics-dashboard.css";
 
@@ -98,7 +99,10 @@ function getSLAState(sla) {
   }
 
   const hoursRemaining =
-    (deadline.getTime() - now.getTime()) /
+    (
+      deadline.getTime() -
+      now.getTime()
+    ) /
     (1000 * 60 * 60);
 
   if (hoursRemaining <= 24) {
@@ -251,11 +255,12 @@ function AnalyticsDashboard() {
     return statuses
       .map((status) => ({
         status,
-        count: complaints.filter(
-          (complaint) =>
-            complaint.status ===
-            status,
-        ).length,
+        count:
+          complaints.filter(
+            (complaint) =>
+              complaint.status ===
+              status,
+          ).length,
       }))
       .filter(
         (item) =>
@@ -275,11 +280,12 @@ function AnalyticsDashboard() {
     return priorities.map(
       (priority) => ({
         priority,
-        count: complaints.filter(
-          (complaint) =>
-            complaint.priority ===
-            priority,
-        ).length,
+        count:
+          complaints.filter(
+            (complaint) =>
+              complaint.priority ===
+              priority,
+          ).length,
       }),
     );
   }, [complaints]);
@@ -392,6 +398,7 @@ function AnalyticsDashboard() {
 
   return (
     <section className="analytics-dashboard">
+
       <header className="analytics-header">
         <div>
           <p className="analytics-eyebrow">
@@ -414,7 +421,9 @@ function AnalyticsDashboard() {
           <button
             type="button"
             className="analytics-refresh-button"
-            onClick={loadAnalytics}
+            onClick={
+              loadAnalytics
+            }
             disabled={loading}
           >
             {loading
@@ -443,7 +452,9 @@ function AnalyticsDashboard() {
 
           <button
             type="button"
-            onClick={loadAnalytics}
+            onClick={
+              loadAnalytics
+            }
           >
             Try again
           </button>
@@ -452,6 +463,7 @@ function AnalyticsDashboard() {
 
 
       <div className="analytics-stat-grid">
+
         <article className="analytics-stat-card">
           <span>
             Total complaints
@@ -558,10 +570,12 @@ function AnalyticsDashboard() {
             their deadline.
           </p>
         </article>
+
       </div>
 
 
       <div className="analytics-grid-two">
+
         <section className="analytics-card">
           <div className="analytics-card-header">
             <div>
@@ -590,7 +604,9 @@ function AnalyticsDashboard() {
                 (item) => (
                   <div
                     className="analytics-bar-row"
-                    key={item.status}
+                    key={
+                      item.status
+                    }
                   >
                     <div className="analytics-bar-label">
                       <span>
@@ -610,8 +626,10 @@ function AnalyticsDashboard() {
                         className="analytics-bar-fill"
                         style={{
                           width: `${
-                            (item.count /
-                              maxStatusCount) *
+                            (
+                              item.count /
+                              maxStatusCount
+                            ) *
                             100
                           }%`,
                         }}
@@ -648,7 +666,9 @@ function AnalyticsDashboard() {
               (item) => (
                 <div
                   className="analytics-bar-row"
-                  key={item.priority}
+                  key={
+                    item.priority
+                  }
                 >
                   <div className="analytics-bar-label">
                     <span>
@@ -665,8 +685,10 @@ function AnalyticsDashboard() {
                       className="analytics-bar-fill"
                       style={{
                         width: `${
-                          (item.count /
-                            maxPriorityCount) *
+                          (
+                            item.count /
+                            maxPriorityCount
+                          ) *
                           100
                         }%`,
                       }}
@@ -677,6 +699,7 @@ function AnalyticsDashboard() {
             )}
           </div>
         </section>
+
       </div>
 
 
@@ -772,8 +795,10 @@ function AnalyticsDashboard() {
                               className="department-workload-fill"
                               style={{
                                 width: `${
-                                  (department.total /
-                                    maxDepartmentCount) *
+                                  (
+                                    department.total /
+                                    maxDepartmentCount
+                                  ) *
                                   100
                                 }%`,
                               }}
@@ -796,6 +821,7 @@ function AnalyticsDashboard() {
 
 
       <div className="analytics-grid-two">
+
         <section className="analytics-card">
           <div className="analytics-card-header">
             <div>
@@ -818,6 +844,7 @@ function AnalyticsDashboard() {
 
 
           <div className="analytics-sla-grid">
+
             <div className="analytics-sla-item">
               <span>
                 On track
@@ -833,6 +860,7 @@ function AnalyticsDashboard() {
               </strong>
             </div>
 
+
             <div className="analytics-sla-item">
               <span>
                 At risk
@@ -843,6 +871,7 @@ function AnalyticsDashboard() {
               </strong>
             </div>
 
+
             <div className="analytics-sla-item analytics-sla-danger">
               <span>
                 Breached
@@ -852,6 +881,7 @@ function AnalyticsDashboard() {
                 {statistics.breached}
               </strong>
             </div>
+
           </div>
         </section>
 
@@ -871,6 +901,7 @@ function AnalyticsDashboard() {
 
 
           <div className="analytics-actions">
+
             <Link
               to="/dashboard/complaints"
               className="analytics-action"
@@ -884,6 +915,7 @@ function AnalyticsDashboard() {
                 complaints.
               </span>
             </Link>
+
 
             <Link
               to="/dashboard/sla"
@@ -899,6 +931,7 @@ function AnalyticsDashboard() {
               </span>
             </Link>
 
+
             <Link
               to="/dashboard/admin"
               className="analytics-action"
@@ -912,9 +945,14 @@ function AnalyticsDashboard() {
                 dashboard.
               </span>
             </Link>
+
           </div>
         </section>
+
       </div>
+
+
+      <AIEvaluationPanel />
 
 
       <section className="analytics-card">
@@ -947,7 +985,9 @@ function AnalyticsDashboard() {
             {recentComplaints.map(
               (complaint) => (
                 <Link
-                  key={complaint.id}
+                  key={
+                    complaint.id
+                  }
                   to={`/dashboard/complaints/${complaint.id}`}
                   className="analytics-recent-item"
                 >
@@ -993,6 +1033,7 @@ function AnalyticsDashboard() {
           </div>
         )}
       </section>
+
     </section>
   );
 }
