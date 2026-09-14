@@ -213,6 +213,17 @@ export async function getSLARecords(
 }
 
 
+export async function getComplaintSLARisk(
+  complaintId,
+) {
+  const response = await api.get(
+    `/complaints/${complaintId}/sla-risk/`,
+  );
+
+  return response.data;
+}
+
+
 export async function reopenComplaint(
   complaintId,
   comment,

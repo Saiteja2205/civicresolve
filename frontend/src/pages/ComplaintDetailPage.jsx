@@ -10,6 +10,7 @@ import {
   getComplaint,
   getComplaintAssignments,
   getComplaintHistory,
+  getComplaintSLARisk,
   getDepartments,
   getOfficers,
   resolveComplaint,
@@ -19,6 +20,7 @@ import {
 import ComplaintPriorityBadge from "../components/ComplaintPriorityBadge.jsx";
 import ComplaintStatusBadge from "../components/ComplaintStatusBadge.jsx";
 import ComplaintEvidencePanel from "../components/ComplaintEvidencePanel.jsx";
+import ComplaintSLARiskPanel from "../components/ComplaintSLARiskPanel.jsx";
 import CitizenResolutionFeedback from "../components/CitizenResolutionFeedback.jsx";
 
 import "../styles/complaints.css";
@@ -26,6 +28,7 @@ import "../styles/complaint-actions.css";
 import "../styles/admin-actions.css";
 import "../styles/admin-assignment.css";
 import "../styles/citizen-resolution.css";
+import "../styles/complaint-sla-risk.css";
 
 
 function getBackPath(role) {
@@ -117,6 +120,31 @@ function getApiErrorMessage(requestError) {
 }
 
 
+function getSLARiskErrorMessage(requestError) {
+  const responseData =
+    requestError?.response?.data;
+
+  if (typeof responseData === "string") {
+    return responseData;
+  }
+
+  if (responseData?.detail) {
+    return responseData.detail;
+  }
+
+  if (
+    responseData &&
+    typeof responseData === "object"
+  ) {
+    return Object.values(responseData)
+      .flat()
+      .join(" ");
+  }
+
+  return "The predictive SLA risk could not be calculated.";
+}
+
+
 function getList(data) {
   if (Array.isArray(data)) {
     return data;
@@ -149,7 +177,13 @@ function ComplaintDetailPage() {
   const [officers, setOfficers] =
     useState([]);
 
+  const [slaRisk, setSLARisk] =
+    useState(null);
+
   const [loading, setLoading] =
+    useState(true);
+
+  const [slaRiskLoading, setSLARiskLoading] =
     useState(true);
 
   const [actionLoading, setActionLoading] =
@@ -159,6 +193,9 @@ function ComplaintDetailPage() {
     useState(false);
 
   const [error, setError] =
+    useState("");
+
+  const [slaRiskError, setSLARiskError] =
     useState("");
 
   const [actionError, setActionError] =
@@ -193,6 +230,34 @@ function ComplaintDetailPage() {
 
   const isCitizen =
     user?.role === "USER";
+
+
+  async function loadSLARisk(id) {
+    try {
+      setSLARiskLoading(true);
+      setSLARiskError("");
+
+      const riskData =
+        await getComplaintSLARisk(id);
+
+      setSLARisk(riskData);
+    } catch (requestError) {
+      console.error(
+        "Failed to load SLA risk:",
+        requestError,
+      );
+
+      setSLARisk(null);
+
+      setSLARiskError(
+        getSLARiskErrorMessage(
+          requestError,
+        ),
+      );
+    } finally {
+      setSLARiskLoading(false);
+    }
+  }
 
 
   async function loadComplaint() {
@@ -233,6 +298,10 @@ function ComplaintDetailPage() {
           getList(departmentData),
         );
       }
+
+      await loadSLARisk(
+        complaintId,
+      );
     } catch (requestError) {
       console.error(
         "Failed to load complaint:",
@@ -242,6 +311,8 @@ function ComplaintDetailPage() {
       setError(
         "Unable to load this complaint.",
       );
+
+      setSLARiskLoading(false);
     } finally {
       setLoading(false);
     }
@@ -279,6 +350,8 @@ function ComplaintDetailPage() {
         getList(assignmentData),
       );
     }
+
+    await loadSLARisk(id);
   }
 
 
@@ -340,6 +413,7 @@ function ComplaintDetailPage() {
       setAssignmentError(
         "Complaint ID is missing. Please reload the page.",
       );
+
       return;
     }
 
@@ -347,6 +421,7 @@ function ComplaintDetailPage() {
       setAssignmentError(
         "Please select a department.",
       );
+
       return;
     }
 
@@ -354,6 +429,7 @@ function ComplaintDetailPage() {
       setAssignmentError(
         "Please select an officer.",
       );
+
       return;
     }
 
@@ -405,6 +481,7 @@ function ComplaintDetailPage() {
       setActionError(
         "Complaint ID is missing. Please reload the page.",
       );
+
       return;
     }
 
@@ -412,20 +489,25 @@ function ComplaintDetailPage() {
     setActionError("");
 
     try {
-      if (complaint.status === "ASSIGNED") {
+      if (
+        complaint.status ===
+        "ASSIGNED"
+      ) {
         await acknowledgeComplaint(
           complaint.id,
           comment,
         );
       } else if (
-        complaint.status === "ACKNOWLEDGED"
+        complaint.status ===
+        "ACKNOWLEDGED"
       ) {
         await startComplaint(
           complaint.id,
           comment,
         );
       } else if (
-        complaint.status === "IN_PROGRESS"
+        complaint.status ===
+        "IN_PROGRESS"
       ) {
         await resolveComplaint(
           complaint.id,
@@ -463,13 +545,18 @@ function ComplaintDetailPage() {
       setActionError(
         "Complaint ID is missing. Please reload the page.",
       );
+
       return;
     }
 
-    if (complaint.status !== "RESOLVED") {
+    if (
+      complaint.status !==
+      "RESOLVED"
+    ) {
       setActionError(
         "Only resolved complaints can be closed.",
       );
+
       return;
     }
 
@@ -641,6 +728,18 @@ function ComplaintDetailPage() {
           />
         </div>
       </div>
+
+
+      <ComplaintSLARiskPanel
+        risk={slaRisk}
+        loading={slaRiskLoading}
+        error={slaRiskError}
+        onRetry={() =>
+          loadSLARisk(
+            complaint.id,
+          )
+        }
+      />
 
 
       {canManageAssignment && (
@@ -1079,7 +1178,8 @@ function ComplaintDetailPage() {
 
 
       {isCitizen &&
-        complaint.status === "RESOLVED" && (
+        complaint.status ===
+          "RESOLVED" && (
           <CitizenResolutionFeedback
             complaint={complaint}
             onReopened={async () => {

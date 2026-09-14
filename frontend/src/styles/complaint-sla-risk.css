@@ -1,0 +1,601 @@
+.complaint-sla-risk-card {
+  margin-bottom: 24px;
+  padding: 28px;
+  border: 1px solid #dfe5ec;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+
+.complaint-sla-risk-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+
+.complaint-sla-risk-eyebrow {
+  margin: 0 0 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #64748b;
+}
+
+
+.complaint-sla-risk-header h2 {
+  margin: 0;
+  font-size: 1.35rem;
+  color: #0f172a;
+}
+
+
+.complaint-sla-risk-description {
+  max-width: 620px;
+  margin: 8px 0 0;
+  color: #64748b;
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+
+.complaint-sla-risk-badge {
+  min-width: 88px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  text-align: center;
+  border: 1px solid transparent;
+}
+
+
+.complaint-sla-risk-badge span {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+
+.complaint-sla-risk-badge strong {
+  display: block;
+  font-size: 1.65rem;
+  line-height: 1;
+}
+
+
+.complaint-sla-risk-badge.risk-low {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #166534;
+}
+
+
+.complaint-sla-risk-badge.risk-medium {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #92400e;
+}
+
+
+.complaint-sla-risk-badge.risk-high {
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: #c2410c;
+}
+
+
+.complaint-sla-risk-badge.risk-critical {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+
+.complaint-sla-risk-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.8fr);
+  gap: 18px;
+  margin-top: 24px;
+}
+
+
+.complaint-sla-risk-score,
+.complaint-sla-risk-action {
+  padding: 18px;
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+
+.complaint-sla-risk-score-track {
+  width: 100%;
+  height: 9px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+
+
+.complaint-sla-risk-score-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: currentColor;
+}
+
+
+.risk-low .complaint-sla-risk-score-fill {
+  color: #16a34a;
+}
+
+
+.risk-medium .complaint-sla-risk-score-fill {
+  color: #d97706;
+}
+
+
+.risk-high .complaint-sla-risk-score-fill {
+  color: #ea580c;
+}
+
+
+.risk-critical .complaint-sla-risk-score-fill {
+  color: #dc2626;
+}
+
+
+.complaint-sla-risk-score-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 10px;
+}
+
+
+.complaint-sla-risk-score-label strong {
+  color: #0f172a;
+  font-size: 1rem;
+}
+
+
+.complaint-sla-risk-score-label span {
+  color: #64748b;
+  font-size: 0.82rem;
+  text-align: right;
+}
+
+
+.complaint-sla-risk-action span {
+  display: block;
+  margin-bottom: 7px;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+
+.complaint-sla-risk-action strong {
+  display: block;
+  color: #0f172a;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+
+.complaint-sla-progress-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 18px;
+}
+
+
+.complaint-sla-progress-card {
+  padding: 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+
+.complaint-sla-progress-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+
+.complaint-sla-progress-heading > div span {
+  display: block;
+  margin-bottom: 3px;
+  color: #475569;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+
+.complaint-sla-progress-heading > div strong {
+  color: #0f172a;
+  font-size: 1.05rem;
+}
+
+
+.complaint-sla-progress-heading small {
+  align-self: center;
+  color: #64748b;
+  font-size: 0.75rem;
+  text-align: right;
+}
+
+
+.complaint-sla-progress-heading small.sla-breached {
+  color: #b91c1c;
+  font-weight: 800;
+}
+
+
+.complaint-sla-progress-track {
+  width: 100%;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+
+
+.complaint-sla-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: #64748b;
+  transition: width 0.3s ease;
+}
+
+
+.complaint-sla-progress-fill.normal {
+  background: #2563eb;
+}
+
+
+.complaint-sla-progress-fill.warning {
+  background: #d97706;
+}
+
+
+.complaint-sla-progress-fill.breached {
+  background: #dc2626;
+}
+
+
+.complaint-sla-progress-card p {
+  margin: 10px 0 0;
+  color: #94a3b8;
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+
+.complaint-sla-risk-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+
+.complaint-sla-risk-metrics > div {
+  padding: 17px;
+  border-right: 1px solid #e2e8f0;
+}
+
+
+.complaint-sla-risk-metrics > div:last-child {
+  border-right: 0;
+}
+
+
+.complaint-sla-risk-metrics span,
+.complaint-sla-risk-metrics small {
+  display: block;
+}
+
+
+.complaint-sla-risk-metrics span {
+  margin-bottom: 5px;
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+
+.complaint-sla-risk-metrics strong {
+  display: block;
+  color: #0f172a;
+  font-size: 1.15rem;
+}
+
+
+.complaint-sla-risk-metrics small {
+  margin-top: 3px;
+  color: #94a3b8;
+  font-size: 0.7rem;
+}
+
+
+.complaint-sla-risk-factors {
+  margin-top: 18px;
+  padding: 18px;
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+
+.complaint-sla-risk-section-heading span {
+  color: #64748b;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+
+.complaint-sla-risk-section-heading h3 {
+  margin: 4px 0 0;
+  color: #0f172a;
+  font-size: 1rem;
+}
+
+
+.complaint-sla-risk-factors ul {
+  display: grid;
+  gap: 9px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+
+.complaint-sla-risk-factors li {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  color: #334155;
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+
+.complaint-sla-risk-factor-dot {
+  flex: 0 0 7px;
+  width: 7px;
+  height: 7px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: #64748b;
+}
+
+
+.complaint-sla-risk-no-factors {
+  margin: 12px 0 0;
+  color: #64748b;
+  font-size: 0.82rem;
+}
+
+
+.complaint-sla-risk-footer {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 12px;
+  row-gap: 4px;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid #e2e8f0;
+}
+
+
+.complaint-sla-risk-footer > span {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+
+.complaint-sla-risk-footer p {
+  margin: 0;
+  color: #475569;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+
+.complaint-sla-risk-footer small {
+  grid-column: 2;
+  color: #94a3b8;
+  font-size: 0.68rem;
+}
+
+
+.complaint-sla-risk-loading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 100px;
+  color: #475569;
+}
+
+
+.complaint-sla-risk-spinner {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #475569;
+  border-radius: 50%;
+  animation: complaint-sla-risk-spin 0.8s linear infinite;
+}
+
+
+.complaint-sla-risk-loading strong {
+  display: block;
+  color: #0f172a;
+  font-size: 0.9rem;
+}
+
+
+.complaint-sla-risk-loading p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
+
+.complaint-sla-risk-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  min-height: 90px;
+  padding: 16px;
+  border-radius: 12px;
+  background: #fef2f2;
+}
+
+
+.complaint-sla-risk-error strong {
+  display: block;
+  color: #991b1b;
+  font-size: 0.9rem;
+}
+
+
+.complaint-sla-risk-error p {
+  margin: 5px 0 0;
+  color: #b91c1c;
+  font-size: 0.78rem;
+}
+
+
+.complaint-sla-risk-retry {
+  flex-shrink: 0;
+  padding: 9px 15px;
+  border: 0;
+  border-radius: 9px;
+  background: #991b1b;
+  color: #ffffff;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+
+.complaint-sla-risk-retry:hover {
+  opacity: 0.9;
+}
+
+
+@keyframes complaint-sla-risk-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+
+@media (max-width: 800px) {
+  .complaint-sla-risk-card {
+    padding: 20px;
+  }
+
+
+  .complaint-sla-risk-header {
+    flex-direction: column;
+  }
+
+
+  .complaint-sla-risk-badge {
+    align-self: flex-start;
+  }
+
+
+  .complaint-sla-risk-summary {
+    grid-template-columns: 1fr;
+  }
+
+
+  .complaint-sla-progress-grid {
+    grid-template-columns: 1fr;
+  }
+
+
+  .complaint-sla-risk-metrics {
+    grid-template-columns: 1fr;
+  }
+
+
+  .complaint-sla-risk-metrics > div {
+    border-right: 0;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+
+  .complaint-sla-risk-metrics > div:last-child {
+    border-bottom: 0;
+  }
+}
+
+
+@media (max-width: 520px) {
+  .complaint-sla-risk-card {
+    padding: 16px;
+    border-radius: 14px;
+  }
+
+
+  .complaint-sla-risk-score-label {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+
+  .complaint-sla-risk-score-label span {
+    text-align: left;
+  }
+
+
+  .complaint-sla-progress-heading {
+    flex-direction: column;
+    gap: 5px;
+  }
+
+
+  .complaint-sla-progress-heading small {
+    align-self: flex-start;
+    text-align: left;
+  }
+
+
+  .complaint-sla-risk-error {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+
+  .complaint-sla-risk-footer {
+    grid-template-columns: 1fr;
+  }
+
+
+  .complaint-sla-risk-footer small {
+    grid-column: 1;
+  }
+}
