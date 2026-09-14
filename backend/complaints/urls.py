@@ -1,6 +1,9 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
 
+from .resolution_assistant_views import (
+    ComplaintResolutionAssistantView,
+)
 from .resolution_views import ComplaintReopenView
 from .sla_risk_views import ComplaintSLARiskView
 from .views import (
@@ -56,6 +59,11 @@ urlpatterns = [
         "complaints/<int:complaint_id>/sla-risk/",
         ComplaintSLARiskView.as_view(),
         name="complaint-sla-risk",
+    ),
+    path(
+        "complaints/<int:complaint_id>/resolution-assistant/",
+        ComplaintResolutionAssistantView.as_view(),
+        name="complaint-resolution-assistant",
     ),
     path(
         "activity/",
