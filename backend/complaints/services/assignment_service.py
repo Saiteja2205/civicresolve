@@ -1,8 +1,13 @@
 from django.db import transaction
 
 from accounts.models import User
-from complaints.models import Complaint, ComplaintAssignment
-from complaints.services.complaint_service import change_complaint_status
+from complaints.models import (
+    Complaint,
+    ComplaintAssignment,
+)
+from complaints.services.complaint_service import (
+    change_complaint_status,
+)
 from complaints.services.officer_assignment_service import (
     OfficerAssignmentError,
     select_officer_for_department,
@@ -11,19 +16,27 @@ from complaints.services.routing_service import (
     RoutingError,
     route_complaint,
 )
+from notifications.models import Notification
+from notifications.services import (
+    create_notification,
+    notify_complaint_user,
+)
 
 
 class ComplaintAssignmentError(Exception):
     """
     Raised when a complaint cannot be assigned safely.
     """
+
     pass
 
 
 def get_system_assignment_user():
     """
-    Return the system user responsible for automatic assignments.
+    Return the system user responsible for automatic
+    assignments.
     """
+
     try:
         return User.objects.get(
             email="system@civicresolve.local",
@@ -32,7 +45,8 @@ def get_system_assignment_user():
         )
     except User.DoesNotExist as exc:
         raise ComplaintAssignmentError(
-            "System assignment user does not exist or is inactive."
+            "System assignment user does not exist "
+            "or is inactive."
         ) from exc
 
 
@@ -50,9 +64,9 @@ def assign_complaint(complaint):
 
     if complaint.status != Complaint.Status.AI_ANALYZING:
         raise ComplaintAssignmentError(
-            f"Complaint must be in AI_ANALYZING status before "
-            f"automatic assignment. Current status: "
-            f"{complaint.status}"
+            f"Complaint must be in AI_ANALYZING status "
+            f"before automatic assignment. Current "
+            f"status: {complaint.status}"
         )
 
     existing_assignment = (
@@ -79,7 +93,9 @@ def assign_complaint(complaint):
     department = routing["department"]
 
     try:
-        officer = select_officer_for_department(department)
+        officer = select_officer_for_department(
+            department
+        )
     except OfficerAssignmentError as exc:
         raise ComplaintAssignmentError(
             f"Officer selection failed: {exc}"
@@ -92,7 +108,10 @@ def assign_complaint(complaint):
         department=department,
         officer=officer,
         assigned_by=system_user,
-        reason="Automatically assigned based on AI routing and officer workload.",
+        reason=(
+            "Automatically assigned based on "
+            "AI routing and officer workload."
+        ),
     )
 
     change_complaint_status(
@@ -100,9 +119,47 @@ def assign_complaint(complaint):
         Complaint.Status.ASSIGNED,
         changed_by=system_user,
         comment=(
-            f"Automatically assigned to {officer.email} "
-            f"in {department.name}."
+            f"Automatically assigned to "
+            f"{officer.email} in {department.name}."
         ),
+    )
+
+    create_notification(
+        recipient=officer,
+        notification_type=(
+            Notification.NotificationType
+            .COMPLAINT_ASSIGNED
+        ),
+        title="New complaint assigned",
+        message=(
+            f"Complaint {complaint.ticket_number} "
+            f"has been assigned to you."
+        ),
+        complaint=complaint,
+        metadata={
+            "event": "complaint_assigned",
+            "department": department.name,
+            "officer": officer.email,
+        },
+    )
+
+    notify_complaint_user(
+        complaint=complaint,
+        notification_type=(
+            Notification.NotificationType
+            .COMPLAINT_ASSIGNED
+        ),
+        title="Complaint assigned",
+        message=(
+            f"Your complaint "
+            f"{complaint.ticket_number} "
+            f"has been assigned to "
+            f"{department.name} for review."
+        ),
+        metadata={
+            "event": "complaint_assigned",
+            "department": department.name,
+        },
     )
 
     return assignment

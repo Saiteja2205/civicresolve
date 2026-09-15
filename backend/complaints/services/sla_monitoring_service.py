@@ -1,13 +1,24 @@
 from django.db import transaction
 from django.utils import timezone
 
-from complaints.models import Complaint, ComplaintHistory, ComplaintSLA
+from complaints.models import (
+    Complaint,
+    ComplaintHistory,
+    ComplaintSLA,
+)
+from notifications.models import Notification
+from notifications.services import (
+    notify_active_admins,
+    notify_assigned_officer,
+    notify_complaint_user,
+)
 
 
 class SLAMonitoringError(Exception):
     """
     Raised when SLA monitoring cannot be completed safely.
     """
+
     pass
 
 
@@ -43,11 +54,13 @@ def check_complaint_sla(complaint):
     )
 
     sla.response_breached = (
-        sla.response_breached or response_breached
+        sla.response_breached
+        or response_breached
     )
 
     sla.resolution_breached = (
-        sla.resolution_breached or resolution_breached
+        sla.resolution_breached
+        or resolution_breached
     )
 
     sla.save(
@@ -73,6 +86,7 @@ def check_complaint_sla(complaint):
         old_status = complaint.status
 
         complaint.status = Complaint.Status.ESCALATED
+
         complaint.save(
             update_fields=[
                 "status",
@@ -86,9 +100,66 @@ def check_complaint_sla(complaint):
             old_status=old_status,
             new_status=Complaint.Status.ESCALATED,
             comment=(
-                "Complaint automatically escalated because "
-                "the resolution SLA was breached."
+                "Complaint automatically escalated "
+                "because the resolution SLA was breached."
             ),
+        )
+
+        notify_complaint_user(
+            complaint=complaint,
+            notification_type=(
+                Notification.NotificationType
+                .SLA_BREACH
+            ),
+            title="SLA breach",
+            message=(
+                f"Your complaint "
+                f"{complaint.ticket_number} "
+                "has exceeded its resolution SLA "
+                "and has been escalated."
+            ),
+            metadata={
+                "event": "resolution_sla_breach",
+            },
+        )
+
+        notify_assigned_officer(
+            complaint=complaint,
+            notification_type=(
+                Notification.NotificationType
+                .SLA_BREACH
+            ),
+            title="Resolution SLA breached",
+            message=(
+                f"Complaint "
+                f"{complaint.ticket_number} "
+                "has breached its resolution SLA."
+            ),
+            metadata={
+                "event": "resolution_sla_breach",
+            },
+        )
+
+        notify_active_admins(
+            notification_type=(
+                Notification.NotificationType
+                .ESCALATED
+            ),
+            title="Complaint escalated",
+            message=(
+                f"Complaint "
+                f"{complaint.ticket_number} "
+                "was automatically escalated "
+                "because its resolution SLA was breached."
+            ),
+            complaint=complaint,
+            metadata={
+                "event": "automatic_sla_escalation",
+                "old_status": old_status,
+                "new_status": (
+                    Complaint.Status.ESCALATED
+                ),
+            },
         )
 
         escalated = True
@@ -96,7 +167,11 @@ def check_complaint_sla(complaint):
     return {
         "complaint": complaint,
         "sla": sla,
-        "response_breached": sla.response_breached,
-        "resolution_breached": sla.resolution_breached,
+        "response_breached": (
+            sla.response_breached
+        ),
+        "resolution_breached": (
+            sla.resolution_breached
+        ),
         "escalated": escalated,
     }
