@@ -267,6 +267,14 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "60/hour",
+        "user": "600/hour",
+    },
 }
 
 
@@ -295,6 +303,17 @@ CSRF_TRUSTED_ORIGINS = env_list(
     "CSRF_TRUSTED_ORIGINS",
     default="http://localhost:5173",
 )
+
+if not DEBUG:
+    if not CORS_ALLOWED_ORIGINS:
+        raise ImproperlyConfigured(
+            "CORS_ALLOWED_ORIGINS must be configured in production."
+        )
+
+    if not CSRF_TRUSTED_ORIGINS:
+        raise ImproperlyConfigured(
+            "CSRF_TRUSTED_ORIGINS must be configured in production."
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -335,7 +354,10 @@ SECURE_HSTS_PRELOAD = env_bool(
 
 SECURE_PROXY_SSL_HEADER = (
     ("HTTP_X_FORWARDED_PROTO", "https")
-    if env_bool("DJANGO_USE_PROXY_SSL_HEADER", default=False)
+    if env_bool(
+        "DJANGO_USE_PROXY_SSL_HEADER",
+        default=False,
+    )
     else None
 )
 
@@ -344,6 +366,18 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
 
 SECURE_REFERRER_POLICY = "same-origin"
+
+SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin"
+
+SECURE_CROSS_ORIGIN_RESOURCE_POLICY = "same-origin"
+
+SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin"
+
+SESSION_COOKIE_HTTPONLY = True
+
+CSRF_COOKIE_HTTPONLY = False
+
+SECURE_BROWSER_XSS_FILTER = True
 
 
 # ---------------------------------------------------------------------------
