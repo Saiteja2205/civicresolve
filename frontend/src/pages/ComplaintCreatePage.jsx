@@ -6,6 +6,8 @@ import {
   getCategories,
 } from "../services/complaintService.js";
 
+import ComplaintLocationPicker from "../components/ComplaintLocationPicker.jsx";
+
 import "../styles/complaint-form.css";
 import "../styles/voice-input.css";
 
@@ -15,6 +17,7 @@ function ComplaintCreatePage() {
   const recognitionRef = useRef(null);
 
   const [categories, setCategories] = useState([]);
+
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -48,10 +51,7 @@ function ComplaintCreatePage() {
 
         setCategories(categoryList);
       } catch (requestError) {
-        console.error(
-          "Failed to load categories:",
-          requestError,
-        );
+        console.error("Failed to load categories:", requestError);
 
         setError(
           "Unable to load complaint categories. Please try again.",
@@ -202,6 +202,22 @@ function ComplaintCreatePage() {
     }
   }
 
+  function handleMapLocationSelect(latitude, longitude) {
+    setForm((current) => ({
+      ...current,
+      latitude,
+      longitude,
+    }));
+
+    setFieldErrors((current) => ({
+      ...current,
+      latitude: "",
+      longitude: "",
+    }));
+
+    setError("");
+  }
+
   function startVoiceInput() {
     if (!speechSupported) {
       setSpeechError(
@@ -325,6 +341,22 @@ function ComplaintCreatePage() {
     ) {
       errors.longitude =
         "Longitude must be between -180 and 180.";
+    }
+
+    if (
+      form.latitude.trim() &&
+      !form.longitude.trim()
+    ) {
+      errors.longitude =
+        "Longitude is required when latitude is provided.";
+    }
+
+    if (
+      form.longitude.trim() &&
+      !form.latitude.trim()
+    ) {
+      errors.latitude =
+        "Latitude is required when longitude is provided.";
     }
 
     return errors;
@@ -721,13 +753,22 @@ function ComplaintCreatePage() {
 
             <div className="complaint-form-section">
               <div>
-                <h3>Optional location coordinates</h3>
+                <h3>Complaint location</h3>
 
                 <p>
-                  These can be used later for map-based
-                  complaint visualization.
+                  You can enter coordinates manually or
+                  select the exact point on the map.
                 </p>
               </div>
+
+              <ComplaintLocationPicker
+                latitude={form.latitude}
+                longitude={form.longitude}
+                onLocationSelect={
+                  handleMapLocationSelect
+                }
+                disabled={submitting}
+              />
 
               <div className="complaint-coordinate-grid">
                 <div className="complaint-field">
@@ -742,7 +783,7 @@ function ComplaintCreatePage() {
                     step="any"
                     value={form.latitude}
                     onChange={handleChange}
-                    placeholder="17.3850"
+                    placeholder="16.521000"
                     disabled={submitting}
                   />
 
@@ -765,7 +806,7 @@ function ComplaintCreatePage() {
                     step="any"
                     value={form.longitude}
                     onChange={handleChange}
-                    placeholder="78.4867"
+                    placeholder="80.667000"
                     disabled={submitting}
                   />
 
