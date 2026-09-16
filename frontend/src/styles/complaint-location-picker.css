@@ -27,22 +27,50 @@
   line-height: 1.5;
 }
 
-.complaint-location-map-toggle {
+.complaint-location-picker-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
   flex-shrink: 0;
+}
+
+.complaint-location-current-button,
+.complaint-location-map-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
   min-height: 40px;
-  padding: 0 15px;
-  border: 1px solid #7f56d9;
+  padding: 0 13px;
   border-radius: 9px;
-  background: #ffffff;
-  color: #6941c6;
   font: inherit;
-  font-size: 0.86rem;
+  font-size: 0.82rem;
   font-weight: 700;
   cursor: pointer;
   transition:
     transform 0.15s ease,
     background 0.15s ease,
-    box-shadow 0.15s ease;
+    box-shadow 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.complaint-location-current-button {
+  border: 1px solid #d0d5dd;
+  background: #ffffff;
+  color: #344054;
+}
+
+.complaint-location-current-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: #f9fafb;
+  box-shadow: 0 4px 12px rgba(16, 24, 40, 0.08);
+}
+
+.complaint-location-map-toggle {
+  border: 1px solid #7f56d9;
+  background: #ffffff;
+  color: #6941c6;
 }
 
 .complaint-location-map-toggle:hover:not(:disabled) {
@@ -51,9 +79,21 @@
   box-shadow: 0 4px 12px rgba(127, 86, 217, 0.12);
 }
 
+.complaint-location-current-button:disabled,
 .complaint-location-map-toggle:disabled {
   cursor: not-allowed;
   opacity: 0.55;
+}
+
+.complaint-location-error {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border: 1px solid #fecdca;
+  border-radius: 9px;
+  background: #fef3f2;
+  color: #b42318;
+  font-size: 0.8rem;
+  line-height: 1.45;
 }
 
 .complaint-location-selected {
@@ -86,7 +126,7 @@
   flex: 1;
   min-width: 0;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
 .complaint-location-selected-content strong {
@@ -98,6 +138,11 @@
   color: #667085;
   font-size: 0.8rem;
   line-height: 1.4;
+}
+
+.complaint-location-accuracy {
+  font-weight: 700;
+  color: #6941c6 !important;
 }
 
 .complaint-location-clear,
@@ -159,7 +204,7 @@
 
 .complaint-location-map {
   width: 100%;
-  height: 360px;
+  height: 390px;
   z-index: 1;
 }
 
@@ -172,12 +217,23 @@
   align-items: center;
   justify-content: space-between;
   gap: 15px;
-  padding: 9px 12px;
+  padding: 10px 12px;
   border-top: 1px solid #eaecf0;
   color: #667085;
   background: #ffffff;
   font-size: 0.76rem;
-  line-height: 1.4;
+  line-height: 1.45;
+}
+
+.complaint-location-map-footer > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.complaint-location-map-footer strong {
+  color: #6941c6;
+  font-size: 0.75rem;
 }
 
 .complaint-location-picker-hint {
@@ -187,16 +243,28 @@
   line-height: 1.45;
 }
 
+@media (max-width: 900px) {
+  .complaint-location-picker-header {
+    flex-direction: column;
+  }
+
+  .complaint-location-picker-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
 @media (max-width: 700px) {
   .complaint-location-picker {
     padding: 15px;
   }
 
-  .complaint-location-picker-header {
+  .complaint-location-picker-actions {
     align-items: stretch;
     flex-direction: column;
   }
 
+  .complaint-location-current-button,
   .complaint-location-map-toggle {
     width: 100%;
   }
@@ -206,7 +274,7 @@
   }
 
   .complaint-location-map {
-    height: 300px;
+    height: 320px;
   }
 
   .complaint-location-map-footer {
