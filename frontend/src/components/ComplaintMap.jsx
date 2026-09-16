@@ -1,40 +1,76 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import "../styles/complaint-map.css";
+
 import { getComplaints } from "../services/complaintService.js";
+import "../styles/complaint-map.css";
 
-const DEFAULT_CENTER = [16.5062, 80.648];
-const DEFAULT_ZOOM = 11;
+const DEFAULT_CENTER = [16.521, 80.667];
 
-const PRIORITY_COLORS = {
-  LOW: "#16a34a",
-  MEDIUM: "#f59e0b",
-  HIGH: "#f97316",
-  CRITICAL: "#dc2626",
+const PRIORITY_META = {
+  LOW: {
+    label: "Low",
+    color: "#2563eb",
+  },
+  MEDIUM: {
+    label: "Medium",
+    color: "#d97706",
+  },
+  HIGH: {
+    label: "High",
+    color: "#dc2626",
+  },
+  CRITICAL: {
+    label: "Critical",
+    color: "#991b1b",
+  },
 };
 
-const PRIORITY_LABELS = {
-  LOW: "Low",
-  MEDIUM: "Medium",
-  HIGH: "High",
-  CRITICAL: "Critical",
-};
+const TERMINAL_STATUSES = new Set([
+  "RESOLVED",
+  "CLOSED",
+  "REJECTED",
+]);
 
-const STATUS_LABELS = {
-  SUBMITTED: "Submitted",
-  AI_ANALYZING: "AI Analyzing",
-  ASSIGNED: "Assigned",
-  ACKNOWLEDGED: "Acknowledged",
-  IN_PROGRESS: "In Progress",
-  NEEDS_INFORMATION: "Needs Information",
-  ESCALATED: "Escalated",
-  RESOLVED: "Resolved",
-  CLOSED: "Closed",
-  REOPENED: "Reopened",
-  REJECTED: "Rejected",
-};
+function getComplaintList(response) {
+  if (Array.isArray(response)) {
+    return response;
+  }
+
+  if (Array.isArray(response?.results)) {
+    return response.results;
+  }
+
+  if (Array.isArray(response?.data)) {
+    return response.data;
+  }
+
+  return [];
+}
+
+function getCoordinate(value) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const number = Number(value);
+
+  return Number.isFinite(number) ? number : null;
+}
+
+function hasValidCoordinates(complaint) {
+  const latitude = getCoordinate(complaint.latitude);
+  const longitude = getCoordinate(complaint.longitude);
+
+  return (
+    latitude !== null &&
+    longitude !== null &&
+    latitude >= -90 &&
+    latitude <= 90 &&
+    longitude >= -180 &&
+    longitude <= 180
+  );
+}
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -45,191 +81,160 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
-function getComplaintArray(data) {
-  if (Array.isArray(data)) {
-    return data;
-  }
-
-  if (Array.isArray(data?.results)) {
-    return data.results;
-  }
-
-  if (Array.isArray(data?.data)) {
-    return data.data;
-  }
-
-  return [];
-}
-
-function parseCoordinate(value) {
-  if (value === null || value === undefined || value === "") {
-    return null;
-  }
-
-  const number = Number.parseFloat(value);
-
-  return Number.isFinite(number) ? number : null;
+function getPriorityColor(priority) {
+  return PRIORITY_META[priority]?.color ?? "#64748b";
 }
 
 function createMarkerIcon(priority) {
-  const color = PRIORITY_COLORS[priority] || PRIORITY_COLORS.MEDIUM;
+  const color = getPriorityColor(priority);
 
   return L.divIcon({
     className: "complaint-map-marker-wrapper",
     html: `
       <div
         class="complaint-map-marker"
-        style="--marker-color: ${color};"
-      >
-        <span></span>
-      </div>
+        style="background:${color};"
+        aria-hidden="true"
+      ></div>
     `,
-    iconSize: [30, 30],
-    iconAnchor: [15, 15],
-    popupAnchor: [0, -16],
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
+    popupAnchor: [0, -12],
   });
 }
 
-function createPopupContent(complaint) {
-  const priority = complaint.priority || "MEDIUM";
-  const status = complaint.status || "SUBMITTED";
-  const complaintId = Number(complaint.id);
+function buildPopup(complaint) {
+  const ticket = escapeHtml(
+    complaint.ticket_number || "Complaint",
+  );
+
+  const title = escapeHtml(
+    complaint.title || "Untitled complaint",
+  );
+
+  const category = escapeHtml(
+    complaint.category_name ||
+      complaint.category?.name ||
+      complaint.category ||
+      "Uncategorized",
+  );
+
+  const status = escapeHtml(
+    complaint.status || "UNKNOWN",
+  );
+
+  const priority = escapeHtml(
+    complaint.priority || "MEDIUM",
+  );
+
+  const location = escapeHtml(
+    complaint.location || "Location not provided",
+  );
 
   return `
     <div class="complaint-map-popup">
       <div class="complaint-map-popup-ticket">
-        ${escapeHtml(
-          complaint.ticket_number || `Complaint #${complaint.id}`,
-        )}
+        ${ticket}
       </div>
 
       <div class="complaint-map-popup-title">
-        ${escapeHtml(complaint.title || "Untitled complaint")}
+        ${title}
       </div>
 
-      <div class="complaint-map-popup-grid">
-        <div>
-          <span>Category</span>
-          <strong>${escapeHtml(complaint.category_name || "—")}</strong>
-        </div>
-
-        <div>
-          <span>Status</span>
-          <strong>
-            ${escapeHtml(STATUS_LABELS[status] || status)}
-          </strong>
-        </div>
-
-        <div>
-          <span>Priority</span>
-          <strong>
-            ${escapeHtml(PRIORITY_LABELS[priority] || priority)}
-          </strong>
-        </div>
-
-        <div>
-          <span>Location</span>
-          <strong>${escapeHtml(complaint.location || "—")}</strong>
-        </div>
+      <div class="complaint-map-popup-row">
+        <span>Category</span>
+        <strong>${category}</strong>
       </div>
 
-      <button
-        type="button"
+      <div class="complaint-map-popup-row">
+        <span>Status</span>
+        <strong>${status}</strong>
+      </div>
+
+      <div class="complaint-map-popup-row">
+        <span>Priority</span>
+        <strong>${priority}</strong>
+      </div>
+
+      <div class="complaint-map-popup-row">
+        <span>Location</span>
+        <strong>${location}</strong>
+      </div>
+
+      <a
         class="complaint-map-popup-link"
-        data-complaint-id="${Number.isFinite(complaintId) ? complaintId : ""}"
+        href="/dashboard/complaints/${encodeURIComponent(complaint.id)}"
       >
-        View complaint →
-      </button>
+        View complaint
+      </a>
     </div>
   `;
 }
 
 export default function ComplaintMap() {
-  const navigate = useNavigate();
-
-  const mapContainerRef = useRef(null);
+  const mapElementRef = useRef(null);
   const mapRef = useRef(null);
   const markerLayerRef = useRef(null);
 
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
+
+  const [search, setSearch] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadComplaints() {
-      try {
+  async function loadComplaints(showRefreshState = false) {
+    try {
+      if (showRefreshState) {
+        setRefreshing(true);
+      } else {
         setLoading(true);
-        setError("");
-
-        const response = await getComplaints();
-
-        if (cancelled) {
-          return;
-        }
-
-        setComplaints(getComplaintArray(response));
-      } catch (requestError) {
-        if (cancelled) {
-          return;
-        }
-
-        console.error(
-          "Failed to load complaints for map:",
-          requestError,
-        );
-
-        setError(
-          requestError?.response?.data?.detail ||
-            requestError?.message ||
-            "Unable to load complaint locations.",
-        );
-
-        setComplaints([]);
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
       }
-    }
 
+      setError("");
+
+      const response = await getComplaints();
+      const data = getComplaintList(response);
+
+      setComplaints(data);
+    } catch (requestError) {
+      console.error(
+        "Failed to load complaints for map:",
+        requestError,
+      );
+
+      setError(
+        requestError?.response?.data?.detail ||
+          requestError?.message ||
+          "Unable to load complaint locations.",
+      );
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }
+
+  useEffect(() => {
     loadComplaints();
 
-    return () => {
-      cancelled = true;
-    };
+    // Initial data load only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const mappedComplaints = useMemo(() => {
     return complaints
-      .map((complaint) => {
-        const latitude = parseCoordinate(complaint.latitude);
-        const longitude = parseCoordinate(complaint.longitude);
-
-        return {
-          ...complaint,
-          latitude,
-          longitude,
-        };
-      })
-      .filter((complaint) => {
-        return (
-          complaint.latitude !== null &&
-          complaint.longitude !== null &&
-          complaint.latitude >= -90 &&
-          complaint.latitude <= 90 &&
-          complaint.longitude >= -180 &&
-          complaint.longitude <= 180
-        );
-      });
+      .filter(hasValidCoordinates)
+      .map((complaint) => ({
+        ...complaint,
+        latitude: getCoordinate(complaint.latitude),
+        longitude: getCoordinate(complaint.longitude),
+      }));
   }, [complaints]);
 
   const filteredComplaints = useMemo(() => {
-    const query = searchTerm.trim().toLowerCase();
+    const query = search.trim().toLowerCase();
 
     return mappedComplaints.filter((complaint) => {
       const matchesSearch =
@@ -237,10 +242,12 @@ export default function ComplaintMap() {
         [
           complaint.ticket_number,
           complaint.title,
+          complaint.description,
           complaint.location,
-          complaint.category_name,
           complaint.status,
           complaint.priority,
+          complaint.category_name,
+          complaint.category?.name,
         ]
           .filter(Boolean)
           .some((value) =>
@@ -263,65 +270,69 @@ export default function ComplaintMap() {
     });
   }, [
     mappedComplaints,
-    searchTerm,
+    search,
     priorityFilter,
     statusFilter,
   ]);
 
   const stats = useMemo(() => {
-    const activeStatuses = new Set([
-      "SUBMITTED",
-      "AI_ANALYZING",
-      "ASSIGNED",
-      "ACKNOWLEDGED",
-      "IN_PROGRESS",
-      "NEEDS_INFORMATION",
-      "ESCALATED",
-      "REOPENED",
-    ]);
+    const active = mappedComplaints.filter(
+      (complaint) =>
+        !TERMINAL_STATUSES.has(complaint.status),
+    ).length;
+
+    const highOrCritical = mappedComplaints.filter(
+      (complaint) =>
+        complaint.priority === "HIGH" ||
+        complaint.priority === "CRITICAL",
+    ).length;
+
+    const critical = mappedComplaints.filter(
+      (complaint) => complaint.priority === "CRITICAL",
+    ).length;
 
     return {
-      totalMapped: filteredComplaints.length,
-
-      active: filteredComplaints.filter((complaint) =>
-        activeStatuses.has(complaint.status),
-      ).length,
-
-      high: filteredComplaints.filter(
-        (complaint) => complaint.priority === "HIGH",
-      ).length,
-
-      critical: filteredComplaints.filter(
-        (complaint) => complaint.priority === "CRITICAL",
-      ).length,
-
-      withoutCoordinates: complaints.filter((complaint) => {
-        return (
-          parseCoordinate(complaint.latitude) === null ||
-          parseCoordinate(complaint.longitude) === null
-        );
-      }).length,
+      total: mappedComplaints.length,
+      active,
+      highOrCritical,
+      critical,
+      withoutCoordinates:
+        Math.max(
+          complaints.length - mappedComplaints.length,
+          0,
+        ),
     };
-  }, [complaints, filteredComplaints]);
+  }, [complaints, mappedComplaints]);
+
+  const statusOptions = useMemo(() => {
+    return [
+      ...new Set(
+        mappedComplaints.map(
+          (complaint) => complaint.status,
+        ),
+      ),
+    ]
+      .filter(Boolean)
+      .sort();
+  }, [mappedComplaints]);
 
   useEffect(() => {
-    if (!mapContainerRef.current || mapRef.current) {
+    if (!mapElementRef.current || mapRef.current) {
       return undefined;
     }
 
-    const map = L.map(mapContainerRef.current, {
+    const map = L.map(mapElementRef.current, {
       center: DEFAULT_CENTER,
-      zoom: DEFAULT_ZOOM,
-      zoomControl: true,
-      attributionControl: true,
+      zoom: 6,
+      scrollWheelZoom: true,
     });
 
     L.tileLayer(
       "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
       {
-        maxZoom: 19,
         attribution:
-          '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a>',
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 19,
       },
     ).addTo(map);
 
@@ -332,16 +343,14 @@ export default function ComplaintMap() {
 
     const resizeTimer = window.setTimeout(() => {
       map.invalidateSize();
-    }, 100);
+    }, 150);
 
     return () => {
       window.clearTimeout(resizeTimer);
-
-      markerLayer.clearLayers();
-      markerLayerRef.current = null;
-
       map.remove();
+
       mapRef.current = null;
+      markerLayerRef.current = null;
     };
   }, []);
 
@@ -356,7 +365,7 @@ export default function ComplaintMap() {
     markerLayer.clearLayers();
 
     if (filteredComplaints.length === 0) {
-      map.setView(DEFAULT_CENTER, DEFAULT_ZOOM);
+      map.setView(DEFAULT_CENTER, 6);
       return;
     }
 
@@ -375,62 +384,31 @@ export default function ComplaintMap() {
         title:
           complaint.ticket_number ||
           complaint.title ||
-          "CivicResolve complaint",
+          "Complaint",
       });
 
       marker.bindPopup(
-        createPopupContent(complaint),
+        buildPopup(complaint),
         {
           maxWidth: 320,
-          minWidth: 240,
         },
       );
-
-      marker.on("popupopen", (event) => {
-        const popupElement = event.popup.getElement();
-
-        if (!popupElement) {
-          return;
-        }
-
-        const button = popupElement.querySelector(
-          "[data-complaint-id]",
-        );
-
-        if (!button) {
-          return;
-        }
-
-        const complaintId = Number(
-          button.getAttribute("data-complaint-id"),
-        );
-
-        const handleClick = () => {
-          if (Number.isFinite(complaintId)) {
-            navigate(`/dashboard/complaints/${complaintId}`);
-          }
-        };
-
-        button.addEventListener("click", handleClick, {
-          once: true,
-        });
-      });
 
       marker.addTo(markerLayer);
     });
 
     if (bounds.length === 1) {
-      map.setView(bounds[0], 15);
+      map.setView(bounds[0], 14);
     } else {
       map.fitBounds(bounds, {
         padding: [40, 40],
         maxZoom: 15,
       });
     }
-  }, [filteredComplaints, navigate]);
+  }, [filteredComplaints]);
 
-  function clearFilters() {
-    setSearchTerm("");
+  function resetFilters() {
+    setSearch("");
     setPriorityFilter("");
     setStatusFilter("");
   }
@@ -439,28 +417,32 @@ export default function ComplaintMap() {
     <section className="complaint-map-card">
       <div className="complaint-map-header">
         <div>
-          <span className="complaint-map-eyebrow">
+          <div className="complaint-map-eyebrow">
             Geospatial intelligence
-          </span>
+          </div>
 
           <h2>Complaint location map</h2>
 
           <p>
-            View geographically tagged grievances and identify
-            active complaint clusters.
+            Visualize reported complaints by location,
+            priority, and workflow status.
           </p>
         </div>
 
-        <div className="complaint-map-live-badge">
-          <span className="complaint-map-live-dot" />
-          Live complaint data
-        </div>
+        <button
+          type="button"
+          className="complaint-map-refresh"
+          onClick={() => loadComplaints(true)}
+          disabled={loading || refreshing}
+        >
+          {refreshing ? "Refreshing..." : "Refresh"}
+        </button>
       </div>
 
       <div className="complaint-map-stats">
         <div className="complaint-map-stat">
           <span>Mapped complaints</span>
-          <strong>{stats.totalMapped}</strong>
+          <strong>{stats.total}</strong>
         </div>
 
         <div className="complaint-map-stat">
@@ -468,156 +450,197 @@ export default function ComplaintMap() {
           <strong>{stats.active}</strong>
         </div>
 
-        <div className="complaint-map-stat">
-          <span>High priority</span>
-          <strong>{stats.high}</strong>
+        <div className="complaint-map-stat complaint-map-stat-warning">
+          <span>High / critical</span>
+          <strong>{stats.highOrCritical}</strong>
+        </div>
+
+        <div className="complaint-map-stat complaint-map-stat-critical">
+          <span>Critical</span>
+          <strong>{stats.critical}</strong>
         </div>
 
         <div className="complaint-map-stat">
-          <span>Critical</span>
-          <strong>{stats.critical}</strong>
+          <span>Without coordinates</span>
+          <strong>{stats.withoutCoordinates}</strong>
         </div>
       </div>
 
       <div className="complaint-map-toolbar">
-        <div className="complaint-map-search">
-          <span>⌕</span>
+        <div className="complaint-map-field complaint-map-search">
+          <label htmlFor="complaint-map-search">
+            Search
+          </label>
 
           <input
+            id="complaint-map-search"
             type="search"
-            placeholder="Search ticket, title, location..."
-            value={searchTerm}
+            value={search}
             onChange={(event) =>
-              setSearchTerm(event.target.value)
+              setSearch(event.target.value)
             }
+            placeholder="Ticket, title, location, category..."
           />
         </div>
 
-        <select
-          value={priorityFilter}
-          onChange={(event) =>
-            setPriorityFilter(event.target.value)
-          }
-          aria-label="Filter by priority"
-        >
-          <option value="">All priorities</option>
-          <option value="LOW">Low</option>
-          <option value="MEDIUM">Medium</option>
-          <option value="HIGH">High</option>
-          <option value="CRITICAL">Critical</option>
-        </select>
+        <div className="complaint-map-field">
+          <label htmlFor="complaint-map-priority">
+            Priority
+          </label>
 
-        <select
-          value={statusFilter}
-          onChange={(event) =>
-            setStatusFilter(event.target.value)
-          }
-          aria-label="Filter by status"
-        >
-          <option value="">All statuses</option>
+          <select
+            id="complaint-map-priority"
+            value={priorityFilter}
+            onChange={(event) =>
+              setPriorityFilter(event.target.value)
+            }
+          >
+            <option value="">All priorities</option>
+            <option value="LOW">Low</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="HIGH">High</option>
+            <option value="CRITICAL">Critical</option>
+          </select>
+        </div>
 
-          {Object.entries(STATUS_LABELS).map(
-            ([value, label]) => (
-              <option key={value} value={value}>
-                {label}
+        <div className="complaint-map-field">
+          <label htmlFor="complaint-map-status">
+            Status
+          </label>
+
+          <select
+            id="complaint-map-status"
+            value={statusFilter}
+            onChange={(event) =>
+              setStatusFilter(event.target.value)
+            }
+          >
+            <option value="">All statuses</option>
+
+            {statusOptions.map((status) => (
+              <option key={status} value={status}>
+                {status}
               </option>
-            ),
-          )}
-        </select>
+            ))}
+          </select>
+        </div>
+
+        <button
+          type="button"
+          className="complaint-map-reset"
+          onClick={resetFilters}
+          disabled={
+            !search &&
+            !priorityFilter &&
+            !statusFilter
+          }
+        >
+          Reset
+        </button>
+      </div>
+
+      <div className="complaint-map-legend">
+        <span>Priority:</span>
+
+        {Object.entries(PRIORITY_META).map(
+          ([key, meta]) => (
+            <span
+              key={key}
+              className="complaint-map-legend-item"
+            >
+              <span
+                className="complaint-map-legend-dot"
+                style={{
+                  background: meta.color,
+                }}
+              />
+              {meta.label}
+            </span>
+          ),
+        )}
+
+        <strong>
+          {filteredComplaints.length} shown
+        </strong>
       </div>
 
       <div className="complaint-map-container">
-        <div
-          ref={mapContainerRef}
-          className="complaint-map"
-          aria-label="Geographical complaint map"
-        />
-
         {loading && (
           <div className="complaint-map-overlay">
             <div className="complaint-map-loading">
-              <span className="complaint-map-spinner" />
               Loading complaint locations...
             </div>
           </div>
         )}
 
         {!loading && error && (
-          <div className="complaint-map-overlay">
-            <div className="complaint-map-message complaint-map-error">
-              <strong>Unable to load map data</strong>
-              <span>{error}</span>
-            </div>
+          <div className="complaint-map-empty">
+            <strong>
+              Unable to load the map data
+            </strong>
+
+            <p>{error}</p>
+
+            <button
+              type="button"
+              onClick={() => loadComplaints()}
+            >
+              Try again
+            </button>
           </div>
         )}
+
+        {!loading &&
+          !error &&
+          mappedComplaints.length === 0 && (
+            <div className="complaint-map-empty">
+              <strong>
+                No complaints have coordinates yet
+              </strong>
+
+              <p>
+                Add valid latitude and longitude values
+                to a complaint to display it on the map.
+              </p>
+            </div>
+          )}
+
+        {!loading &&
+          !error &&
+          mappedComplaints.length > 0 &&
+          filteredComplaints.length === 0 && (
+            <div className="complaint-map-empty">
+              <strong>
+                No mapped complaints match these filters
+              </strong>
+
+              <p>
+                Reset the filters to view all mapped
+                complaints.
+              </p>
+            </div>
+          )}
+
+        <div
+          ref={mapElementRef}
+          className="complaint-map"
+          aria-label="Complaint locations map"
+        />
       </div>
 
       <div className="complaint-map-footer">
-        <div className="complaint-map-legend">
-          {Object.entries(PRIORITY_COLORS).map(
-            ([priority, color]) => (
-              <span key={priority}>
-                <i
-                  className="complaint-map-legend-dot"
-                  style={{
-                    backgroundColor: color,
-                  }}
-                />
-                {PRIORITY_LABELS[priority]}
-              </span>
-            ),
-          )}
-        </div>
+        <span>
+          Only complaints with valid latitude and
+          longitude coordinates are displayed on the map.
+        </span>
 
-        <div className="complaint-map-result-summary">
-          {stats.withoutCoordinates > 0 && (
-            <span>
-              {stats.withoutCoordinates} complaints without
-              coordinates
-            </span>
-          )}
-
-          <span>
-            Showing {filteredComplaints.length} of{" "}
-            {mappedComplaints.length} mapped complaints
-          </span>
-        </div>
-      </div>
-
-      {filteredComplaints.length === 0 &&
-        !loading &&
-        !error && (
-          <div className="complaint-map-empty">
-            <strong>No mapped complaints found</strong>
-
-            {mappedComplaints.length > 0 ? (
-              <span>
-                Try changing your search or filters.
-              </span>
-            ) : (
-              <span>
-                No complaints with valid latitude and
-                longitude coordinates are currently
-                available.
-              </span>
-            )}
-
-            {(searchTerm ||
-              priorityFilter ||
-              statusFilter) && (
-              <button
-                type="button"
-                onClick={clearFilters}
-              >
-                Clear filters
-              </button>
-            )}
-          </div>
-        )}
-
-      <div className="complaint-map-note">
-        Map data · Only complaints containing valid latitude
-        and longitude coordinates are displayed.
+        <a
+          href="https://www.openstreetmap.org/"
+          target="_blank"
+          rel="noreferrer"
+        >
+          OpenStreetMap
+        </a>
       </div>
     </section>
   );

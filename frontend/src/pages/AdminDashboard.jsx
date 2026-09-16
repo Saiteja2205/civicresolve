@@ -9,11 +9,10 @@ import {
 
 import ComplaintPriorityBadge from "../components/ComplaintPriorityBadge.jsx";
 import ComplaintStatusBadge from "../components/ComplaintStatusBadge.jsx";
-import ComplaintMap from "../components/ComplaintMap.jsx";
 import DuplicateReviewPanel from "../components/DuplicateReviewPanel.jsx";
+import ComplaintMap from "../components/ComplaintMap.jsx";
 
 import "../styles/admin-dashboard.css";
-
 
 function getComplaintList(data) {
   if (Array.isArray(data)) {
@@ -26,7 +25,6 @@ function getComplaintList(data) {
 
   return [];
 }
-
 
 function formatDate(value) {
   if (!value) {
@@ -48,19 +46,12 @@ function formatDate(value) {
   });
 }
 
-
 function AdminDashboard() {
   const { user } = useAuth();
 
-  const [complaints, setComplaints] =
-    useState([]);
-
-  const [loading, setLoading] =
-    useState(true);
-
-  const [error, setError] =
-    useState("");
-
+  const [complaints, setComplaints] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   async function loadDashboard() {
     try {
@@ -69,9 +60,7 @@ function AdminDashboard() {
 
       const data = await getComplaints();
 
-      setComplaints(
-        getComplaintList(data),
-      );
+      setComplaints(getComplaintList(data));
     } catch (requestError) {
       console.error(
         "Failed to load admin dashboard:",
@@ -86,11 +75,9 @@ function AdminDashboard() {
     }
   }
 
-
   useEffect(() => {
     loadDashboard();
   }, []);
-
 
   const statistics = useMemo(() => {
     const total = complaints.length;
@@ -130,7 +117,6 @@ function AdminDashboard() {
     };
   }, [complaints]);
 
-
   const recentComplaints = useMemo(() => {
     return [...complaints]
       .sort(
@@ -141,14 +127,10 @@ function AdminDashboard() {
       .slice(0, 8);
   }, [complaints]);
 
-
   return (
     <section className="admin-dashboard">
-
       <header className="admin-dashboard-header">
-
         <div>
-
           <p className="admin-dashboard-eyebrow">
             ADMINISTRATOR WORKSPACE
           </p>
@@ -161,12 +143,9 @@ function AdminDashboard() {
             Monitor complaints, resolution progress,
             priorities, and escalations from one place.
           </p>
-
         </div>
 
-
         <div className="admin-dashboard-header-actions">
-
           <button
             type="button"
             className="admin-refresh-button"
@@ -178,23 +157,17 @@ function AdminDashboard() {
               : "Refresh"}
           </button>
 
-
           <Link
             to="/dashboard/complaints"
             className="admin-primary-button"
           >
             View all complaints
           </Link>
-
         </div>
-
       </header>
 
-
       <div className="admin-welcome-strip">
-
         <div>
-
           <span>
             Signed in as
           </span>
@@ -203,23 +176,18 @@ function AdminDashboard() {
             {user?.email ||
               "Administrator"}
           </strong>
-
         </div>
-
 
         <span className="admin-role-pill">
           ADMIN
         </span>
-
       </div>
-
 
       {error && (
         <div
           className="admin-dashboard-error"
           role="alert"
         >
-
           <span>
             {error}
           </span>
@@ -230,17 +198,12 @@ function AdminDashboard() {
           >
             Try again
           </button>
-
         </div>
       )}
 
-
       <div className="admin-stat-grid">
-
         <article className="admin-stat-card">
-
           <div className="admin-stat-top">
-
             <span>
               Total complaints
             </span>
@@ -248,7 +211,6 @@ function AdminDashboard() {
             <span className="admin-stat-icon">
               ALL
             </span>
-
           </div>
 
           <strong>
@@ -260,14 +222,10 @@ function AdminDashboard() {
           <p>
             All complaints visible to administrators
           </p>
-
         </article>
 
-
         <article className="admin-stat-card">
-
           <div className="admin-stat-top">
-
             <span>
               Active
             </span>
@@ -275,7 +233,6 @@ function AdminDashboard() {
             <span className="admin-stat-icon">
               ACT
             </span>
-
           </div>
 
           <strong>
@@ -287,14 +244,10 @@ function AdminDashboard() {
           <p>
             Complaints still requiring action
           </p>
-
         </article>
 
-
         <article className="admin-stat-card">
-
           <div className="admin-stat-top">
-
             <span>
               Resolved
             </span>
@@ -302,7 +255,6 @@ function AdminDashboard() {
             <span className="admin-stat-icon">
               DONE
             </span>
-
           </div>
 
           <strong>
@@ -314,14 +266,10 @@ function AdminDashboard() {
           <p>
             Resolved or closed complaints
           </p>
-
         </article>
 
-
         <article className="admin-stat-card">
-
           <div className="admin-stat-top">
-
             <span>
               Escalated
             </span>
@@ -329,7 +277,6 @@ function AdminDashboard() {
             <span className="admin-stat-icon">
               SLA
             </span>
-
           </div>
 
           <strong>
@@ -341,14 +288,10 @@ function AdminDashboard() {
           <p>
             Complaints requiring escalation attention
           </p>
-
         </article>
 
-
         <article className="admin-stat-card admin-stat-card-alert">
-
           <div className="admin-stat-top">
-
             <span>
               High priority
             </span>
@@ -356,7 +299,6 @@ function AdminDashboard() {
             <span className="admin-stat-icon">
               HIGH
             </span>
-
           </div>
 
           <strong>
@@ -368,24 +310,16 @@ function AdminDashboard() {
           <p>
             High and critical priority complaints
           </p>
-
         </article>
-
       </div>
-
 
       <DuplicateReviewPanel />
 
-
       <ComplaintMap />
 
-
       <section className="admin-dashboard-card">
-
         <div className="admin-section-header">
-
           <div>
-
             <p className="admin-section-eyebrow">
               RECENT ACTIVITY
             </p>
@@ -398,9 +332,7 @@ function AdminDashboard() {
               The latest complaints received by
               CivicResolve.
             </p>
-
           </div>
-
 
           <Link
             to="/dashboard/complaints"
@@ -408,9 +340,7 @@ function AdminDashboard() {
           >
             See all
           </Link>
-
         </div>
-
 
         {loading ? (
           <div className="admin-table-loading">
@@ -422,7 +352,6 @@ function AdminDashboard() {
           </div>
         ) : recentComplaints.length === 0 ? (
           <div className="admin-empty-state">
-
             <h3>
               No complaints yet
             </h3>
@@ -431,15 +360,11 @@ function AdminDashboard() {
               Complaints submitted through the citizen
               portal will appear here.
             </p>
-
           </div>
         ) : (
           <div className="admin-table-wrapper">
-
             <table className="admin-complaint-table">
-
               <thead>
-
                 <tr>
                   <th>Ticket</th>
                   <th>Complaint</th>
@@ -449,113 +374,77 @@ function AdminDashboard() {
                   <th>Submitted</th>
                   <th />
                 </tr>
-
               </thead>
 
-
               <tbody>
-
                 {recentComplaints.map(
                   (complaint) => (
                     <tr key={complaint.id}>
-
                       <td>
                         <span className="admin-ticket-number">
-                          {
-                            complaint.ticket_number
-                          }
+                          {complaint.ticket_number}
                         </span>
                       </td>
 
-
                       <td>
-
                         <div className="admin-complaint-title">
-                          {
-                            complaint.title
-                          }
+                          {complaint.title}
                         </div>
 
                         <div className="admin-complaint-category">
-                          {
-                            complaint.category_name ||
-                            "Uncategorized"
-                          }
+                          {complaint.category_name ||
+                            "Uncategorized"}
                         </div>
-
                       </td>
 
-
                       <td>
-                        {
-                          complaint.department_name ||
-                          "—"
-                        }
+                        {complaint.department_name ||
+                          "—"}
                       </td>
 
-
                       <td>
-
                         <ComplaintPriorityBadge
                           priority={
                             complaint.priority
                           }
                         />
-
                       </td>
 
-
                       <td>
-
                         <ComplaintStatusBadge
                           status={
                             complaint.status
                           }
                         />
-
                       </td>
 
-
                       <td>
-
                         <span className="admin-date">
                           {formatDate(
                             complaint.created_at,
                           )}
                         </span>
-
                       </td>
 
-
                       <td>
-
                         <Link
                           to={`/dashboard/complaints/${complaint.id}`}
                           className="admin-view-link"
                         >
                           View
                         </Link>
-
                       </td>
-
                     </tr>
                   ),
                 )}
-
               </tbody>
-
             </table>
-
           </div>
         )}
-
       </section>
 
-
       <section className="admin-dashboard-card admin-system-card">
-
         <div>
-
           <p className="admin-section-eyebrow">
             CIVICRESOLVE PIPELINE
           </p>
@@ -569,57 +458,44 @@ function AdminDashboard() {
             intelligent routing, officer assignment,
             and SLA tracking automatically.
           </p>
-
         </div>
 
-
         <div className="admin-workflow">
-
           <div className="admin-workflow-step">
             <span>01</span>
             <strong>Submitted</strong>
           </div>
 
-
           <div className="admin-workflow-arrow">
             →
           </div>
-
 
           <div className="admin-workflow-step">
             <span>02</span>
             <strong>AI analyzed</strong>
           </div>
 
-
           <div className="admin-workflow-arrow">
             →
           </div>
-
 
           <div className="admin-workflow-step">
             <span>03</span>
             <strong>Assigned</strong>
           </div>
 
-
           <div className="admin-workflow-arrow">
             →
           </div>
-
 
           <div className="admin-workflow-step">
             <span>04</span>
             <strong>Resolved</strong>
           </div>
-
         </div>
-
       </section>
-
     </section>
   );
 }
-
 
 export default AdminDashboard;
