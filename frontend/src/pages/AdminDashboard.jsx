@@ -9,6 +9,7 @@ import {
 
 import ComplaintPriorityBadge from "../components/ComplaintPriorityBadge.jsx";
 import ComplaintStatusBadge from "../components/ComplaintStatusBadge.jsx";
+import ComplaintMap from "../components/ComplaintMap.jsx";
 import DuplicateReviewPanel from "../components/DuplicateReviewPanel.jsx";
 
 import "../styles/admin-dashboard.css";
@@ -69,16 +70,16 @@ function AdminDashboard() {
       const data = await getComplaints();
 
       setComplaints(
-        getComplaintList(data)
+        getComplaintList(data),
       );
     } catch (requestError) {
       console.error(
         "Failed to load admin dashboard:",
-        requestError
+        requestError,
       );
 
       setError(
-        "Unable to load dashboard data. Please try again."
+        "Unable to load dashboard data. Please try again.",
       );
     } finally {
       setLoading(false);
@@ -100,24 +101,24 @@ function AdminDashboard() {
           "RESOLVED",
           "CLOSED",
           "REJECTED",
-        ].includes(complaint.status)
+        ].includes(complaint.status),
     ).length;
 
     const resolved = complaints.filter(
       (complaint) =>
         complaint.status === "RESOLVED" ||
-        complaint.status === "CLOSED"
+        complaint.status === "CLOSED",
     ).length;
 
     const escalated = complaints.filter(
       (complaint) =>
-        complaint.status === "ESCALATED"
+        complaint.status === "ESCALATED",
     ).length;
 
     const highPriority = complaints.filter(
       (complaint) =>
         complaint.priority === "HIGH" ||
-        complaint.priority === "CRITICAL"
+        complaint.priority === "CRITICAL",
     ).length;
 
     return {
@@ -135,7 +136,7 @@ function AdminDashboard() {
       .sort(
         (a, b) =>
           new Date(b.created_at) -
-          new Date(a.created_at)
+          new Date(a.created_at),
       )
       .slice(0, 8);
   }, [complaints]);
@@ -376,6 +377,9 @@ function AdminDashboard() {
       <DuplicateReviewPanel />
 
 
+      <ComplaintMap />
+
+
       <section className="admin-dashboard-card">
 
         <div className="admin-section-header">
@@ -516,7 +520,7 @@ function AdminDashboard() {
 
                         <span className="admin-date">
                           {formatDate(
-                            complaint.created_at
+                            complaint.created_at,
                           )}
                         </span>
 
@@ -535,7 +539,7 @@ function AdminDashboard() {
                       </td>
 
                     </tr>
-                  )
+                  ),
                 )}
 
               </tbody>
