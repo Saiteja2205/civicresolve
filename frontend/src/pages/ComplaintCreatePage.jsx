@@ -4,9 +4,8 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   createComplaint,
   getCategories,
+  translateVoiceComplaint,
 } from "../services/complaintService.js";
-
-import ComplaintLocationPicker from "../components/ComplaintLocationPicker.jsx";
 
 import "../styles/complaint-form.css";
 import "../styles/voice-input.css";
@@ -15,6 +14,7 @@ function ComplaintCreatePage() {
   const navigate = useNavigate();
 
   const recognitionRef = useRef(null);
+  const voiceTranscriptRef = useRef("");
 
   const [categories, setCategories] = useState([]);
 
@@ -36,6 +36,9 @@ function ComplaintCreatePage() {
   const [isListening, setIsListening] = useState(false);
   const [speechError, setSpeechError] = useState("");
   const [voiceInterimText, setVoiceInterimText] = useState("");
+  const [voiceProcessing, setVoiceProcessing] = useState(false);
+  const [detectedVoiceLanguage, setDetectedVoiceLanguage] =
+    useState("");
 
   useEffect(() => {
     async function loadCategories() {
@@ -51,7 +54,10 @@ function ComplaintCreatePage() {
 
         setCategories(categoryList);
       } catch (requestError) {
-        console.error("Failed to load categories:", requestError);
+        console.error(
+          "Failed to load categories:",
+          requestError,
+        );
 
         setError(
           "Unable to load complaint categories. Please try again.",
@@ -81,12 +87,13 @@ function ComplaintCreatePage() {
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = "en-IN";
-    recognition.maxAlternatives = 1;
+    recognition.maxAlternatives = 3;
 
     recognition.onstart = () => {
       setIsListening(true);
       setSpeechError("");
       setVoiceInterimText("");
+      voiceTranscriptRef.current = "";
     };
 
     recognition.onresult = (event) => {
@@ -98,42 +105,26 @@ function ComplaintCreatePage() {
         index < event.results.length;
         index += 1
       ) {
-        const transcript =
-          event.results[index][0].transcript;
+        const result = event.results[index];
 
-        if (event.results[index].isFinal) {
-          finalText += transcript;
+        const transcript =
+          result[0]?.transcript || "";
+
+        if (result.isFinal) {
+          finalText += `${transcript} `;
         } else {
-          interimText += transcript;
+          interimText += `${transcript} `;
         }
       }
 
       if (finalText.trim()) {
-        setForm((current) => {
-          const existingDescription =
-            current.description.trim();
-
-          const separator =
-            existingDescription ? " " : "";
-
-          return {
-            ...current,
-            description:
-              existingDescription +
-              separator +
-              finalText.trim(),
-          };
-        });
-
-        setFieldErrors((current) => ({
-          ...current,
-          description: "",
-        }));
-
-        setError("");
+        voiceTranscriptRef.current =
+          `${voiceTranscriptRef.current} ${finalText}`.trim();
       }
 
-      setVoiceInterimText(interimText.trim());
+      setVoiceInterimText(
+        interimText.trim(),
+      );
     };
 
     recognition.onerror = (event) => {
@@ -169,15 +160,77 @@ function ComplaintCreatePage() {
       setVoiceInterimText("");
     };
 
-    recognition.onend = () => {
+    recognition.onend = async () => {
       setIsListening(false);
       setVoiceInterimText("");
+
+      const transcript =
+        voiceTranscriptRef.current.trim();
+
+      if (!transcript) {
+        return;
+      }
+
+      setVoiceProcessing(true);
+      setSpeechError("");
+      setError("");
+
+      try {
+        const result =
+          await translateVoiceComplaint(
+            transcript,
+          );
+
+        setDetectedVoiceLanguage(
+          result.detected_language || "",
+        );
+
+        setForm((current) => ({
+          ...current,
+          title:
+            result.english_title ||
+            current.title,
+          description:
+            result.english_description ||
+            current.description,
+        }));
+
+        setFieldErrors((current) => ({
+          ...current,
+          title: "",
+          description: "",
+        }));
+      } catch (requestError) {
+        console.error(
+          "Voice translation failed:",
+          requestError,
+        );
+
+        const detail =
+          requestError?.response?.data?.detail;
+
+        setSpeechError(
+          detail ||
+            "Unable to convert the voice complaint into English. Please try again.",
+        );
+      } finally {
+        setVoiceProcessing(false);
+        voiceTranscriptRef.current = "";
+      }
     };
 
     recognitionRef.current = recognition;
 
     return () => {
-      recognition.stop();
+      try {
+        recognition.stop();
+      } catch (recognitionError) {
+        console.error(
+          "Unable to stop speech recognition:",
+          recognitionError,
+        );
+      }
+
       recognitionRef.current = null;
     };
   }, []);
@@ -202,22 +255,6 @@ function ComplaintCreatePage() {
     }
   }
 
-  function handleMapLocationSelect(latitude, longitude) {
-    setForm((current) => ({
-      ...current,
-      latitude,
-      longitude,
-    }));
-
-    setFieldErrors((current) => ({
-      ...current,
-      latitude: "",
-      longitude: "",
-    }));
-
-    setError("");
-  }
-
   function startVoiceInput() {
     if (!speechSupported) {
       setSpeechError(
@@ -233,12 +270,15 @@ function ComplaintCreatePage() {
       return;
     }
 
-    if (isListening) {
+    if (isListening || voiceProcessing) {
       return;
     }
 
     setSpeechError("");
+    setError("");
+    setDetectedVoiceLanguage("");
     setVoiceInterimText("");
+    voiceTranscriptRef.current = "";
 
     try {
       recognitionRef.current.start();
@@ -275,14 +315,19 @@ function ComplaintCreatePage() {
   function clearVoiceTranscript() {
     setForm((current) => ({
       ...current,
+      title: "",
       description: "",
     }));
 
+    setDetectedVoiceLanguage("");
     setVoiceInterimText("");
     setSpeechError("");
 
+    voiceTranscriptRef.current = "";
+
     setFieldErrors((current) => ({
       ...current,
+      title: "",
       description: "",
     }));
   }
@@ -293,32 +338,39 @@ function ComplaintCreatePage() {
     if (!form.title.trim()) {
       errors.title = "Title is required.";
     } else if (form.title.trim().length < 5) {
-      errors.title = "Title must be at least 5 characters.";
+      errors.title =
+        "Title must be at least 5 characters.";
     }
 
     if (!form.description.trim()) {
-      errors.description = "Description is required.";
-    } else if (form.description.trim().length < 10) {
+      errors.description =
+        "Description is required.";
+    } else if (
+      form.description.trim().length < 10
+    ) {
       errors.description =
         "Description must be at least 10 characters.";
     }
 
     if (!form.category) {
-      errors.category = "Please select a category.";
+      errors.category =
+        "Please select a category.";
     }
 
     if (
       form.latitude.trim() &&
       Number.isNaN(Number(form.latitude))
     ) {
-      errors.latitude = "Latitude must be a valid number.";
+      errors.latitude =
+        "Latitude must be a valid number.";
     }
 
     if (
       form.longitude.trim() &&
       Number.isNaN(Number(form.longitude))
     ) {
-      errors.longitude = "Longitude must be a valid number.";
+      errors.longitude =
+        "Longitude must be a valid number.";
     }
 
     if (
@@ -343,22 +395,6 @@ function ComplaintCreatePage() {
         "Longitude must be between -180 and 180.";
     }
 
-    if (
-      form.latitude.trim() &&
-      !form.longitude.trim()
-    ) {
-      errors.longitude =
-        "Longitude is required when latitude is provided.";
-    }
-
-    if (
-      form.longitude.trim() &&
-      !form.latitude.trim()
-    ) {
-      errors.latitude =
-        "Latitude is required when longitude is provided.";
-    }
-
     return errors;
   }
 
@@ -380,15 +416,20 @@ function ComplaintCreatePage() {
 
     const errors = {};
 
-    Object.entries(data).forEach(([key, value]) => {
-      if (Array.isArray(value)) {
-        errors[key] = value.join(" ");
-      } else if (typeof value === "string") {
-        errors[key] = value;
-      } else {
-        errors[key] = JSON.stringify(value);
-      }
-    });
+    Object.entries(data).forEach(
+      ([key, value]) => {
+        if (Array.isArray(value)) {
+          errors[key] = value.join(" ");
+        } else if (
+          typeof value === "string"
+        ) {
+          errors[key] = value;
+        } else {
+          errors[key] =
+            JSON.stringify(value);
+        }
+      },
+    );
 
     return errors;
   }
@@ -400,9 +441,19 @@ function ComplaintCreatePage() {
       stopVoiceInput();
     }
 
-    const validationErrors = validateForm();
+    if (voiceProcessing) {
+      setError(
+        "Please wait for the voice complaint to finish processing.",
+      );
+      return;
+    }
 
-    if (Object.keys(validationErrors).length > 0) {
+    const validationErrors =
+      validateForm();
+
+    if (
+      Object.keys(validationErrors).length > 0
+    ) {
       setFieldErrors(validationErrors);
       return;
     }
@@ -413,24 +464,29 @@ function ComplaintCreatePage() {
 
     const payload = {
       title: form.title.trim(),
-      description: form.description.trim(),
+      description:
+        form.description.trim(),
       category: Number(form.category),
     };
 
     if (form.location.trim()) {
-      payload.location = form.location.trim();
+      payload.location =
+        form.location.trim();
     }
 
     if (form.latitude.trim()) {
-      payload.latitude = Number(form.latitude);
+      payload.latitude =
+        Number(form.latitude);
     }
 
     if (form.longitude.trim()) {
-      payload.longitude = Number(form.longitude);
+      payload.longitude =
+        Number(form.longitude);
     }
 
     try {
-      const complaint = await createComplaint(payload);
+      const complaint =
+        await createComplaint(payload);
 
       navigate(
         `/dashboard/complaints/${complaint.id}`,
@@ -445,7 +501,9 @@ function ComplaintCreatePage() {
       );
 
       const apiErrors =
-        extractApiErrors(requestError);
+        extractApiErrors(
+          requestError,
+        );
 
       const generalError =
         apiErrors.general ||
@@ -461,7 +519,9 @@ function ComplaintCreatePage() {
       delete mappedFieldErrors.general;
       delete mappedFieldErrors.detail;
 
-      setFieldErrors(mappedFieldErrors);
+      setFieldErrors(
+        mappedFieldErrors,
+      );
     } finally {
       setSubmitting(false);
     }
@@ -475,11 +535,14 @@ function ComplaintCreatePage() {
             CITIZEN WORKSPACE
           </p>
 
-          <h1>Submit a complaint</h1>
+          <h1>
+            Submit a complaint
+          </h1>
 
           <p>
-            Tell us what happened. CivicResolve will analyze
-            and route your complaint automatically.
+            Tell us what happened. CivicResolve
+            will analyze and route your complaint
+            automatically.
           </p>
         </div>
 
@@ -493,11 +556,14 @@ function ComplaintCreatePage() {
 
       <div className="complaint-form-card">
         <div className="complaint-form-intro">
-          <h2>Complaint details</h2>
+          <h2>
+            Complaint details
+          </h2>
 
           <p>
-            Provide clear information so the system can
-            classify and route the issue accurately.
+            Provide clear information so the
+            system can classify and route the
+            issue accurately.
           </p>
         </div>
 
@@ -510,7 +576,9 @@ function ComplaintCreatePage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
+        <form
+          onSubmit={handleSubmit}
+        >
           <div className="complaint-form-grid">
             <div className="complaint-field complaint-field-full">
               <label htmlFor="title">
@@ -525,7 +593,10 @@ function ComplaintCreatePage() {
                 onChange={handleChange}
                 placeholder="Example: Wi-Fi not working in Block A"
                 maxLength={200}
-                disabled={submitting}
+                disabled={
+                  submitting ||
+                  voiceProcessing
+                }
               />
 
               {fieldErrors.title && (
@@ -543,7 +614,7 @@ function ComplaintCreatePage() {
 
                 {speechSupported && (
                   <span className="voice-supported-label">
-                    Voice input available
+                    Multilingual voice input
                   </span>
                 )}
               </div>
@@ -562,9 +633,11 @@ function ComplaintCreatePage() {
                     </h3>
 
                     <p>
-                      You can describe the issue naturally.
-                      The transcript will appear below for
-                      you to review and edit.
+                      Speak naturally in English,
+                      Telugu, Hindi, or another
+                      language. CivicResolve will
+                      convert the complaint into
+                      English automatically.
                     </p>
                   </div>
 
@@ -573,28 +646,41 @@ function ComplaintCreatePage() {
                       <button
                         type="button"
                         className="voice-start-button"
-                        onClick={startVoiceInput}
+                        onClick={
+                          startVoiceInput
+                        }
                         disabled={
                           submitting ||
+                          voiceProcessing ||
                           !speechSupported
                         }
                       >
-                        <span aria-hidden="true">
+                        <span
+                          aria-hidden="true"
+                        >
                           🎙️
                         </span>
-                        Start voice
+
+                        {voiceProcessing
+                          ? "Converting..."
+                          : "Start voice"}
                       </button>
                     ) : (
                       <button
                         type="button"
                         className="voice-stop-button"
-                        onClick={stopVoiceInput}
-                        disabled={submitting}
+                        onClick={
+                          stopVoiceInput
+                        }
+                        disabled={
+                          submitting
+                        }
                       >
                         <span
                           className="voice-recording-dot"
                           aria-hidden="true"
                         />
+
                         Stop listening
                       </button>
                     )}
@@ -606,9 +692,10 @@ function ComplaintCreatePage() {
                     className="voice-browser-warning"
                     role="status"
                   >
-                    Voice input is not supported in this
-                    browser. Use Chrome or Edge for voice
-                    complaint submission.
+                    Voice input is not supported
+                    in this browser. Use Chrome or
+                    Edge for voice complaint
+                    submission.
                   </p>
                 )}
 
@@ -623,28 +710,68 @@ function ComplaintCreatePage() {
                       aria-hidden="true"
                     />
 
-                    Listening... Speak clearly about the
-                    problem.
+                    Listening... Speak clearly
+                    about the problem.
                   </div>
                 )}
 
                 {voiceInterimText && (
                   <div className="voice-interim-text">
-                    <span>Live transcript:</span>{" "}
+                    <span>
+                      Live transcript:
+                    </span>{" "}
                     {voiceInterimText}
                   </div>
                 )}
 
-                {form.description.trim() && (
-                  <button
-                    type="button"
-                    className="voice-clear-button"
-                    onClick={clearVoiceTranscript}
-                    disabled={submitting}
+                {voiceProcessing && (
+                  <div
+                    className="voice-listening-status"
+                    role="status"
+                    aria-live="polite"
                   >
-                    Clear description
-                  </button>
+                    <span
+                      className="voice-pulse"
+                      aria-hidden="true"
+                    />
+
+                    AI is detecting the language
+                    and converting your complaint
+                    to English...
+                  </div>
                 )}
+
+                {detectedVoiceLanguage && (
+                  <div
+                    className="voice-interim-text"
+                    role="status"
+                  >
+                    <span>
+                      Detected language:
+                    </span>{" "}
+                    {detectedVoiceLanguage}
+                  </div>
+                )}
+
+                {!isListening &&
+                  !voiceProcessing &&
+                  (
+                    form.title.trim() ||
+                    form.description.trim()
+                  ) && (
+                    <button
+                      type="button"
+                      className="voice-clear-button"
+                      onClick={
+                        clearVoiceTranscript
+                      }
+                      disabled={
+                        submitting
+                      }
+                    >
+                      Clear voice-filled fields
+                    </button>
+                  )}
               </div>
 
               <textarea
@@ -654,7 +781,10 @@ function ComplaintCreatePage() {
                 onChange={handleChange}
                 placeholder="Describe the problem, when it started, and any useful details — or use voice input above."
                 rows={7}
-                disabled={submitting}
+                disabled={
+                  submitting ||
+                  voiceProcessing
+                }
               />
 
               <div className="complaint-field-meta">
@@ -663,7 +793,8 @@ function ComplaintCreatePage() {
                 </span>
 
                 <span>
-                  {form.description.length} characters
+                  {form.description.length}{" "}
+                  characters
                 </span>
               </div>
 
@@ -694,7 +825,9 @@ function ComplaintCreatePage() {
                 value={form.category}
                 onChange={handleChange}
                 disabled={
-                  loadingCategories || submitting
+                  loadingCategories ||
+                  submitting ||
+                  voiceProcessing
                 }
               >
                 <option value="">
@@ -703,16 +836,20 @@ function ComplaintCreatePage() {
                     : "Select a category"}
                 </option>
 
-                {categories.map((category) => (
-                  <option
-                    key={category.id}
-                    value={category.id}
-                  >
-                    {category.name}
-                    {" — "}
-                    {category.department_name}
-                  </option>
-                ))}
+                {categories.map(
+                  (category) => (
+                    <option
+                      key={category.id}
+                      value={category.id}
+                    >
+                      {category.name}
+                      {" — "}
+                      {
+                        category.department_name
+                      }
+                    </option>
+                  ),
+                )}
               </select>
 
               {fieldErrors.category && (
@@ -724,7 +861,8 @@ function ComplaintCreatePage() {
               {!loadingCategories &&
                 categories.length === 0 && (
                   <p className="complaint-field-error">
-                    No active categories are available.
+                    No active categories are
+                    available.
                   </p>
                 )}
             </div>
@@ -741,7 +879,10 @@ function ComplaintCreatePage() {
                 value={form.location}
                 onChange={handleChange}
                 placeholder="Example: Block A, Room 204"
-                disabled={submitting}
+                disabled={
+                  submitting ||
+                  voiceProcessing
+                }
               />
 
               {fieldErrors.location && (
@@ -753,22 +894,16 @@ function ComplaintCreatePage() {
 
             <div className="complaint-form-section">
               <div>
-                <h3>Complaint location</h3>
+                <h3>
+                  Optional location coordinates
+                </h3>
 
                 <p>
-                  You can enter coordinates manually or
-                  select the exact point on the map.
+                  These can be used later for
+                  map-based complaint
+                  visualization.
                 </p>
               </div>
-
-              <ComplaintLocationPicker
-                latitude={form.latitude}
-                longitude={form.longitude}
-                onLocationSelect={
-                  handleMapLocationSelect
-                }
-                disabled={submitting}
-              />
 
               <div className="complaint-coordinate-grid">
                 <div className="complaint-field">
@@ -783,8 +918,11 @@ function ComplaintCreatePage() {
                     step="any"
                     value={form.latitude}
                     onChange={handleChange}
-                    placeholder="16.521000"
-                    disabled={submitting}
+                    placeholder="17.3850"
+                    disabled={
+                      submitting ||
+                      voiceProcessing
+                    }
                   />
 
                   {fieldErrors.latitude && (
@@ -806,8 +944,11 @@ function ComplaintCreatePage() {
                     step="any"
                     value={form.longitude}
                     onChange={handleChange}
-                    placeholder="80.667000"
-                    disabled={submitting}
+                    placeholder="78.4867"
+                    disabled={
+                      submitting ||
+                      voiceProcessing
+                    }
                   />
 
                   {fieldErrors.longitude && (
@@ -833,6 +974,7 @@ function ComplaintCreatePage() {
               className="complaint-submit-action"
               disabled={
                 submitting ||
+                voiceProcessing ||
                 loadingCategories ||
                 categories.length === 0
               }

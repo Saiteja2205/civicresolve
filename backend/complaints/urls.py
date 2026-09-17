@@ -15,6 +15,9 @@ from .resolution_views import (
 from .sla_risk_views import (
     ComplaintSLARiskView,
 )
+from .voice_translation_views import (
+    VoiceComplaintTranslationView,
+)
 from .views import (
     ComplaintAssignmentViewSet,
     ComplaintDuplicateViewSet,
@@ -109,5 +112,10 @@ urlpatterns = [
         "activity/",
         UserActivityListView.as_view(),
         name="user-activity",
+    ),
+    path(
+        "voice-translation/",
+        VoiceComplaintTranslationView.as_view(),
+        name="voice-complaint-translation",
     ),
 ]

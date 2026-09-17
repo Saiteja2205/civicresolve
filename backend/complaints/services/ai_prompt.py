@@ -2,14 +2,6 @@ from organizations.models import Category, Department
 
 
 def build_complaint_analysis_prompt(complaint):
-    """
-    Build a structured prompt for AI-based complaint analysis.
-
-    The prompt includes the actual categories and departments
-    available in the CivicResolve database so that the AI can
-    return valid database IDs.
-    """
-
     departments = list(
         Department.objects
         .filter(is_active=True)
@@ -65,9 +57,26 @@ def build_complaint_analysis_prompt(complaint):
     prompt = f"""
 You are the complaint analysis engine for CivicResolve.
 
-Analyze the following citizen complaint and determine the
-most appropriate category, department, priority, urgency,
-confidence, and a concise decision explanation.
+Analyze the following citizen complaint.
+
+The complaint may be written in English or another language.
+
+First identify the primary language of the original complaint.
+
+Then create a faithful English translation or normalization
+of the original title and description.
+
+The English representation must preserve the original meaning.
+Do not invent facts, locations, people, events, severity,
+causes, or other information that is not present in the
+original complaint.
+
+The original citizen text must never be modified.
+
+After creating the English representation, use the meaning of
+the complaint to determine the most appropriate category,
+department, priority, urgency, confidence, summary, and
+concise decision explanation.
 
 COMPLAINT TITLE:
 {complaint.title}
@@ -93,6 +102,9 @@ Return ONLY valid JSON.
 
 The JSON must contain exactly these fields:
 {{
+    "detected_language": "English",
+    "english_title": "Faithful English translation or normalization of the original title.",
+    "english_description": "Faithful English translation or normalization of the original description.",
     "summary": "A concise summary of the complaint.",
     "explanation": "A concise explanation of the main factors supporting the category and priority decision.",
     "predicted_category": 0,
@@ -104,64 +116,82 @@ The JSON must contain exactly these fields:
 
 RULES:
 
-1. summary must clearly describe the main issue.
+1. detected_language must identify the primary language used
+   in the original complaint title and description.
 
-2. explanation must be concise and factual. Explain the
-   important complaint characteristics that support the
-   predicted category and priority.
+2. Use a common human-readable language name such as English,
+   Telugu, Hindi, Tamil, Kannada, Malayalam, Bengali, Marathi,
+   Urdu, or another appropriate language name.
 
-3. Do not provide hidden reasoning, chain-of-thought,
+3. english_title must faithfully translate or normalize the
+   original title into English.
+
+4. english_description must faithfully translate or normalize
+   the original description into English.
+
+5. Do not invent facts during translation or normalization.
+
+6. If the original complaint is already in English, detected_language
+   must be English and the English title and description should
+   preserve the original meaning.
+
+7. summary must clearly describe the main issue.
+
+8. explanation must be concise and factual.
+
+9. Do not provide hidden reasoning, chain-of-thought,
    internal deliberation, or step-by-step reasoning.
 
-4. explanation should normally be one or two sentences.
+10. explanation should normally be one or two sentences.
 
-5. predicted_category MUST be the ID of the most appropriate
-   category from the AVAILABLE CATEGORIES list.
+11. predicted_category MUST be the ID of the most appropriate
+    category from the AVAILABLE CATEGORIES list.
 
-6. predicted_department MUST be the ID of the department
-   responsible for the selected category.
+12. predicted_department MUST be the ID of the department
+    responsible for the selected category.
 
-7. predicted_category MUST NOT be null.
+13. predicted_category MUST NOT be null.
 
-8. predicted_department MUST NOT be null.
+14. predicted_department MUST NOT be null.
 
-9. The predicted_category and predicted_department must use
-   only IDs that exist in the lists provided above.
+15. The predicted_category and predicted_department must use
+    only IDs that exist in the lists provided above.
 
-10. The selected category's department_id must match
+16. The selected category's department_id must match
     predicted_department.
 
-11. Do not invent category IDs or department IDs.
+17. Do not invent category IDs or department IDs.
 
-12. Use the citizen-selected category as useful context,
+18. Use the citizen-selected category as useful context,
     but independently evaluate the complaint description.
-    If the complaint clearly belongs to another category,
+
+19. If the complaint clearly belongs to another category,
     select the more appropriate category from the available
     categories.
 
-13. predicted_priority must be exactly one of:
+20. predicted_priority must be exactly one of:
     LOW
     MEDIUM
     HIGH
     CRITICAL
 
-14. urgency_score must be a number between 0 and 100.
+21. urgency_score must be a number between 0 and 100.
 
-15. confidence_score must be a number between 0 and 100.
+22. confidence_score must be a number between 0 and 100.
 
-16. Consider the impact, severity, affected users, duration,
+23. Consider the impact, severity, affected users, duration,
     safety implications, and urgency when assigning priority
     and urgency_score.
 
-17. Do not include markdown.
+24. Do not include markdown.
 
-18. Do not include explanations outside the JSON object.
+25. Do not include explanations outside the JSON object.
 
-19. Always select the best available category.
+26. Always select the best available category.
 
-20. Always select the best available department.
+27. Always select the best available department.
 
-21. Keep the explanation suitable for display to a citizen,
+28. Keep the explanation suitable for display to a citizen,
     officer, or administrator.
 
 Return only the JSON object.

@@ -17,10 +17,6 @@ from organizations.models import Category
 
 
 def parse_ai_response(response_text):
-    """
-    Convert the AI's JSON response text into a Python dictionary.
-    """
-
     if not isinstance(response_text, str):
         raise AIProviderError(
             "AI response must be text."
@@ -42,10 +38,14 @@ def parse_ai_response(response_text):
         if lines and lines[-1].strip() == "```":
             lines = lines[:-1]
 
-        response_text = "\n".join(lines).strip()
+        response_text = "\n".join(
+            lines
+        ).strip()
 
     try:
-        data = json.loads(response_text)
+        data = json.loads(
+            response_text
+        )
     except json.JSONDecodeError as exc:
         raise AIProviderError(
             "AI returned invalid JSON."
@@ -63,22 +63,16 @@ def apply_category_fallback(
     complaint,
     validated_output,
 ):
-    """
-    If AI does not provide a category, use the category
-    explicitly selected by the citizen as a safe routing
-    fallback.
-
-    AI predictions remain authoritative whenever they are
-    valid.
-    """
-
-    if validated_output["predicted_category"] is not None:
+    if validated_output[
+        "predicted_category"
+    ] is not None:
         return validated_output
 
     if not complaint.category_id:
         raise AIProviderError(
-            "AI did not predict a category and the complaint "
-            "does not contain a selected category."
+            "AI did not predict a category and "
+            "the complaint does not contain a "
+            "selected category."
         )
 
     category = (
@@ -94,15 +88,17 @@ def apply_category_fallback(
 
     if category is None:
         raise AIProviderError(
-            "The complaint's selected category is invalid "
-            "or inactive."
+            "The complaint's selected category "
+            "is invalid or inactive."
         )
 
-    validated_output["predicted_category"] = category.id
+    validated_output[
+        "predicted_category"
+    ] = category.id
 
-    validated_output["predicted_department"] = (
-        category.department_id
-    )
+    validated_output[
+        "predicted_department"
+    ] = category.department_id
 
     return validated_output
 
@@ -112,34 +108,21 @@ def create_ai_analysis(
     complaint,
     ai_output=None,
 ):
-    """
-    Create or update the AI analysis for a complaint.
-
-    If ai_output is provided, it is used directly for testing.
-
-    If ai_output is not provided, Gemini generates the analysis.
-
-    The AI-predicted category and department are validated
-    against the active CivicResolve database.
-
-    If AI returns no category, the citizen-selected category
-    is used as a safe routing fallback.
-
-    The validated AI priority is applied to the complaint so
-    downstream SLA calculation uses the AI decision.
-    """
-
     provider = None
 
     if ai_output is None:
-        prompt = build_complaint_analysis_prompt(
-            complaint
+        prompt = (
+            build_complaint_analysis_prompt(
+                complaint
+            )
         )
 
         provider = GeminiProvider()
 
-        response_text = provider.analyze_complaint(
-            prompt
+        response_text = (
+            provider.analyze_complaint(
+                prompt
+            )
         )
 
         ai_output = parse_ai_response(
@@ -147,25 +130,67 @@ def create_ai_analysis(
         )
 
     try:
-        validated_output = validate_ai_output(
-            ai_output
+        validated_output = (
+            validate_ai_output(
+                ai_output
+            )
         )
-    except (TypeError, ValueError, KeyError) as exc:
+    except (
+        TypeError,
+        ValueError,
+        KeyError,
+    ) as exc:
         raise AIProviderError(
             f"AI output validation failed: {exc}"
         ) from exc
 
-    validated_output = apply_category_fallback(
-        complaint,
-        validated_output,
+    validated_output = (
+        apply_category_fallback(
+            complaint,
+            validated_output,
+        )
+    )
+
+    detected_language = (
+        validated_output.get(
+            "detected_language"
+        )
+        or "English"
+    )
+
+    english_title = (
+        validated_output.get(
+            "english_title"
+        )
+        or complaint.title
+    )
+
+    english_description = (
+        validated_output.get(
+            "english_description"
+        )
+        or complaint.description
     )
 
     analysis, created = (
         ComplaintAnalysis.objects.update_or_create(
             complaint=complaint,
             defaults={
-                "summary": validated_output["summary"],
-                "explanation": validated_output["explanation"],
+                "summary": validated_output[
+                    "summary"
+                ],
+                "explanation": validated_output[
+                    "explanation"
+                ],
+                "detected_language": (
+                    detected_language
+                ),
+                "english_title": (
+                    english_title
+                ),
+                "english_description": (
+                    english_description
+                ),
                 "predicted_category_id": (
                     validated_output[
                         "predicted_category"
@@ -200,9 +225,11 @@ def create_ai_analysis(
         )
     )
 
-    complaint.priority = validated_output[
-        "predicted_priority"
-    ]
+    complaint.priority = (
+        validated_output[
+            "predicted_priority"
+        ]
+    )
 
     complaint.save(
         update_fields=[

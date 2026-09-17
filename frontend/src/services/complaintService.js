@@ -101,6 +101,20 @@ export async function createComplaint(
 }
 
 
+export async function translateVoiceComplaint(
+  text,
+) {
+  const response = await api.post(
+    "/voice-translation/",
+    {
+      text,
+    },
+  );
+
+  return response.data;
+}
+
+
 export async function uploadComplaintEvidence(
   complaintId,
   imageFile,

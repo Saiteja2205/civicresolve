@@ -134,7 +134,18 @@ class ComplaintAnalysis(models.Model):
     explanation = models.TextField(
         blank=True,
     )
+    detected_language = models.CharField(
+        max_length=50,
+        default="English",
+    )
 
+    english_title = models.TextField(
+        blank=True,
+    )
+
+    english_description = models.TextField(
+        blank=True,
+    )
     predicted_category = models.ForeignKey(
         Category,
         on_delete=models.PROTECT,

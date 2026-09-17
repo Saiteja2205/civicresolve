@@ -188,9 +188,80 @@ def validate_ai_output(data):
             "Confidence score must be between 0 and 100."
         )
 
+    detected_language = data.get(
+        "detected_language",
+        "English",
+    )
+
+    if not isinstance(detected_language, str):
+        raise ValueError(
+            "Detected language must be a string."
+        )
+
+    detected_language = detected_language.strip()
+
+    if not detected_language:
+        detected_language = "English"
+
+    if len(detected_language) > 50:
+        raise ValueError(
+            "Detected language cannot exceed 50 characters."
+        )
+
+    english_title = data.get(
+        "english_title"
+    )
+
+    if english_title is not None and not isinstance(
+        english_title,
+        str,
+    ):
+        raise ValueError(
+            "English title must be a string."
+        )
+
+    english_title = (
+        english_title.strip()
+        if english_title
+        else None
+    )
+
+    if english_title and len(english_title) > 200:
+        raise ValueError(
+            "English title cannot exceed 200 characters."
+        )
+
+    english_description = data.get(
+        "english_description"
+    )
+
+    if english_description is not None and not isinstance(
+        english_description,
+        str,
+    ):
+        raise ValueError(
+            "English description must be a string."
+        )
+
+    english_description = (
+        english_description.strip()
+        if english_description
+        else None
+    )
+
+    if english_description and len(
+        english_description
+    ) > 5000:
+        raise ValueError(
+            "English description cannot exceed 5000 characters."
+        )
+
     return {
         "summary": summary,
         "explanation": explanation,
+        "detected_language": detected_language,
+        "english_title": english_title,
+        "english_description": english_description,
         "predicted_category": predicted_category,
         "predicted_department": predicted_department,
         "predicted_priority": predicted_priority,

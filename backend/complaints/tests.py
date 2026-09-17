@@ -830,11 +830,26 @@ class ComplaintReopenAPITests(ComplaintAPITestBase):
 
         self.assertEqual(
             self.complaint.status,
-            Complaint.Status.REOPENED,
+            Complaint.Status.ASSIGNED,
+        )
+
+        reopen_history = self.complaint.history.filter(
+            old_status=Complaint.Status.RESOLVED,
+            new_status=Complaint.Status.REOPENED,
         )
 
         self.assertEqual(
-            self.complaint.history.count(),
+            reopen_history.count(),
+            1,
+        )
+
+        assignment_history = self.complaint.history.filter(
+            old_status=Complaint.Status.REOPENED,
+            new_status=Complaint.Status.ASSIGNED,
+        )
+
+        self.assertEqual(
+            assignment_history.count(),
             1,
         )
 
