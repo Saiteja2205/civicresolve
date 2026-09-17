@@ -1190,18 +1190,16 @@ function ComplaintDetailPage() {
       )}
 
 
-      {isCitizen &&
-        complaint.status ===
-          "RESOLVED" && (
-          <CitizenResolutionFeedback
-            complaint={complaint}
-            onReopened={async () => {
-              await refreshComplaintData(
-                complaint.id,
-              );
-            }}
-          />
-        )}
+      {isCitizen && (
+        <CitizenResolutionFeedback
+          complaint={complaint}
+          onReopened={async () => {
+            await refreshComplaintData(
+              complaint.id,
+            );
+          }}
+        />
+      )}
 
 
       <div className="complaint-detail-grid">

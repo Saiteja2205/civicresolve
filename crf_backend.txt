@@ -7,7 +7,6 @@ from .models import (
     ComplaintDuplicate,
     ComplaintEvidence,
     ComplaintHistory,
-    ComplaintResolutionFeedback,
     ComplaintSLA,
 )
 
@@ -34,7 +33,6 @@ class ComplaintAnalysisSerializer(
 
     class Meta:
         model = ComplaintAnalysis
-
         fields = [
             "id",
             "complaint",
@@ -546,69 +544,195 @@ class ComplaintDuplicateSerializer(
             float(obj.similarity_score) * 100,
             2,
         )
+from django.db import transaction
+
+from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from accounts.permissions import IsCitizenUser
+from complaints.models import Complaint
+from complaints.services.complaint_service import (
+    change_complaint_status,
+)
 
 
-class ComplaintResolutionFeedbackSerializer(
-    serializers.ModelSerializer
-):
-    complaint_ticket_number = serializers.CharField(
-        source="complaint.ticket_number",
-        read_only=True,
-    )
+class ComplaintReopenView(APIView):
+    permission_classes = [
+        IsAuthenticated,
+        IsCitizenUser,
+    ]
 
-    citizen_email = serializers.EmailField(
-        source="citizen.email",
-        read_only=True,
-    )
-
-    rating_display = serializers.SerializerMethodField()
-
-    class Meta:
-        model = ComplaintResolutionFeedback
-
-        fields = [
-            "id",
-            "complaint",
-            "complaint_ticket_number",
-            "citizen",
-            "citizen_email",
-            "rating",
-            "rating_display",
-            "comment",
-            "resolution_cycle",
-            "created_at",
-            "updated_at",
-        ]
-
-        read_only_fields = [
-            "id",
-            "complaint",
-            "complaint_ticket_number",
-            "citizen",
-            "citizen_email",
-            "rating_display",
-            "resolution_cycle",
-            "created_at",
-            "updated_at",
-        ]
-
-    def validate_rating(self, value):
-        if value < 1 or value > 5:
-            raise serializers.ValidationError(
-                "Rating must be between 1 and 5."
+    @transaction.atomic
+    def post(self, request, complaint_id):
+        try:
+            complaint = Complaint.objects.select_related(
+                "user",
+                "category",
+                "category__department",
+            ).get(
+                id=complaint_id,
+                user=request.user,
+            )
+        except Complaint.DoesNotExist:
+            return Response(
+                {
+                    "detail": (
+                        "Complaint not found."
+                    )
+                },
+                status=status.HTTP_404_NOT_FOUND,
             )
 
-        return value
-
-    def validate_comment(self, value):
-        value = value.strip()
-
-        if len(value) > 2000:
-            raise serializers.ValidationError(
-                "Feedback comment cannot exceed 2000 characters."
+        if complaint.status != Complaint.Status.RESOLVED:
+            return Response(
+                {
+                    "detail": (
+                        "Only resolved complaints "
+                        "can be reopened."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
-        return value
+        comment = str(
+            request.data.get(
+                "comment",
+                "",
+            )
+        ).strip()
 
-    def get_rating_display(self, obj):
-        return f"{obj.rating}/5"
+        if len(comment) < 10:
+            return Response(
+                {
+                    "detail": (
+                        "Please explain why the "
+                        "complaint needs to be reopened "
+                        "using at least 10 characters."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            complaint = change_complaint_status(
+                complaint=complaint,
+                new_status=Complaint.Status.REOPENED,
+                changed_by=request.user,
+                comment=(
+                    "Citizen requested reopening: "
+                    f"{comment}"
+                ),
+            )
+        except ValueError as exc:
+            return Response(
+                {
+                    "detail": str(exc)
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response(
+            {
+                "detail": (
+                    "Complaint reopened successfully."
+                ),
+                "complaint_id": complaint.id,
+                "ticket_number": complaint.ticket_number,
+                "status": complaint.status,
+            },
+            status=status.HTTP_200_OK,
+        )
+from django.urls import path
+from rest_framework.routers import DefaultRouter
+
+from .ai_evaluation_views import AIEvaluationView
+from .resolution_assistant_views import (
+    ComplaintResolutionAssistantView,
+)
+from .resolution_views import ComplaintReopenView
+from .sla_risk_views import ComplaintSLARiskView
+
+from .views import (
+    ComplaintAssignmentViewSet,
+    ComplaintDuplicateViewSet,
+    ComplaintEvidenceViewSet,
+    ComplaintSLAViewSet,
+    ComplaintViewSet,
+    UserActivityListView,
+)
+
+
+router = DefaultRouter()
+
+
+router.register(
+    r"complaints",
+    ComplaintViewSet,
+    basename="complaint",
+)
+
+
+router.register(
+    r"assignments",
+    ComplaintAssignmentViewSet,
+    basename="assignment",
+)
+
+
+router.register(
+    r"sla",
+    ComplaintSLAViewSet,
+    basename="sla",
+)
+
+
+router.register(
+    r"complaint-duplicates",
+    ComplaintDuplicateViewSet,
+    basename="complaint-duplicate",
+)
+
+
+router.register(
+    r"complaint-evidence",
+    ComplaintEvidenceViewSet,
+    basename="complaint-evidence",
+)
+
+
+urlpatterns = [
+    path(
+        "complaints/<int:complaint_id>/reopen/",
+        ComplaintReopenView.as_view(),
+        name="complaint-reopen",
+    ),
+
+    path(
+        "complaints/<int:complaint_id>/sla-risk/",
+        ComplaintSLARiskView.as_view(),
+        name="complaint-sla-risk",
+    ),
+
+    path(
+        "complaints/<int:complaint_id>/resolution-assistant/",
+        ComplaintResolutionAssistantView.as_view(),
+        name="complaint-resolution-assistant",
+    ),
+
+    path(
+        "ai-evaluation/",
+        AIEvaluationView.as_view(),
+        name="ai-evaluation",
+    ),
+
+    path(
+        "activity/",
+        UserActivityListView.as_view(),
+        name="user-activity",
+    ),
+]
+
+
+urlpatterns += router.urls

@@ -259,6 +259,58 @@ export async function reopenComplaint(
 }
 
 
+export async function getResolutionFeedback(
+  complaintId,
+) {
+  const response = await api.get(
+    `/complaints/${complaintId}/resolution-feedback/`,
+  );
+
+  return response.data;
+}
+
+
+export async function submitResolutionFeedback(
+  complaintId,
+  rating,
+  comment = "",
+) {
+  const response = await api.post(
+    `/complaints/${complaintId}/resolution-feedback/`,
+    {
+      rating,
+      comment,
+    },
+  );
+
+  return response.data;
+}
+
+
+export async function getResolutionFeedbackDetail(
+  feedbackId,
+) {
+  const response = await api.get(
+    `/complaints/resolution-feedback/${feedbackId}/`,
+  );
+
+  return response.data;
+}
+
+
+export async function updateResolutionFeedback(
+  feedbackId,
+  feedbackData,
+) {
+  const response = await api.patch(
+    `/complaints/resolution-feedback/${feedbackId}/`,
+    feedbackData,
+  );
+
+  return response.data;
+}
+
+
 export async function getActivity() {
   const response = await api.get(
     "/activity/",

@@ -1,13 +1,20 @@
-from django.urls import path
+from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from .ai_evaluation_views import AIEvaluationView
 from .resolution_assistant_views import (
     ComplaintResolutionAssistantView,
 )
-from .resolution_views import ComplaintReopenView
-from .sla_risk_views import ComplaintSLARiskView
-
+from .resolution_feedback_views import (
+    ComplaintResolutionFeedbackDetailView,
+    ComplaintResolutionFeedbackView,
+)
+from .resolution_views import (
+    ComplaintReopenView,
+)
+from .sla_risk_views import (
+    ComplaintSLARiskView,
+)
 from .views import (
     ComplaintAssignmentViewSet,
     ComplaintDuplicateViewSet,
@@ -58,9 +65,26 @@ router.register(
 
 urlpatterns = [
     path(
+        "",
+        include(router.urls),
+    ),
+
+    path(
         "complaints/<int:complaint_id>/reopen/",
         ComplaintReopenView.as_view(),
         name="complaint-reopen",
+    ),
+
+    path(
+        "complaints/<int:complaint_id>/resolution-feedback/",
+        ComplaintResolutionFeedbackView.as_view(),
+        name="complaint-resolution-feedback",
+    ),
+
+    path(
+        "complaints/resolution-feedback/<int:feedback_id>/",
+        ComplaintResolutionFeedbackDetailView.as_view(),
+        name="complaint-resolution-feedback-detail",
     ),
 
     path(
@@ -87,6 +111,3 @@ urlpatterns = [
         name="user-activity",
     ),
 ]
-
-
-urlpatterns += router.urls

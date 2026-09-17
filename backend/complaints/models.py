@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import models
 from pgvector.django import VectorField
+
 from organizations.models import Category
 
 
@@ -106,7 +107,11 @@ class Complaint(models.Model):
             .first()
         )
 
-        next_id = 1 if last_complaint is None else last_complaint.id + 1
+        next_id = (
+            1
+            if last_complaint is None
+            else last_complaint.id + 1
+        )
 
         return f"CR-{next_id:06d}"
 
@@ -185,6 +190,7 @@ class ComplaintAnalysis(models.Model):
 
 
 class ComplaintAssignment(models.Model):
+
     complaint = models.ForeignKey(
         Complaint,
         on_delete=models.CASCADE,
@@ -228,6 +234,7 @@ class ComplaintAssignment(models.Model):
 
 
 class ComplaintHistory(models.Model):
+
     complaint = models.ForeignKey(
         Complaint,
         on_delete=models.CASCADE,
@@ -267,11 +274,13 @@ class ComplaintHistory(models.Model):
     def __str__(self):
         return (
             f"{self.complaint.ticket_number}: "
-            f"{self.old_status or 'NEW'} -> {self.new_status}"
+            f"{self.old_status or 'NEW'} -> "
+            f"{self.new_status}"
         )
 
 
 class SLAPolicy(models.Model):
+
     priority = models.CharField(
         max_length=20,
         choices=Complaint.Priority.choices,
@@ -300,6 +309,7 @@ class SLAPolicy(models.Model):
 
 
 class ComplaintSLA(models.Model):
+
     complaint = models.OneToOneField(
         Complaint,
         on_delete=models.CASCADE,
@@ -339,6 +349,7 @@ class ComplaintSLA(models.Model):
 
 
 class ComplaintEmbedding(models.Model):
+
     complaint = models.OneToOneField(
         Complaint,
         on_delete=models.CASCADE,
@@ -441,18 +452,26 @@ class ComplaintDuplicate(models.Model):
 
         constraints = [
             models.UniqueConstraint(
-                fields=["complaint", "possible_duplicate"],
+                fields=[
+                    "complaint",
+                    "possible_duplicate",
+                ],
                 name="unique_complaint_duplicate_pair",
             ),
             models.CheckConstraint(
-                condition=~models.Q(complaint=models.F("possible_duplicate")),
+                condition=~models.Q(
+                    complaint=models.F("possible_duplicate")
+                ),
                 name="complaint_duplicate_not_self",
             ),
         ]
 
         indexes = [
             models.Index(
-                fields=["status", "-detected_at"],
+                fields=[
+                    "status",
+                    "-detected_at",
+                ],
                 name="duplicate_status_detected_idx",
             ),
         ]
@@ -463,6 +482,7 @@ class ComplaintDuplicate(models.Model):
             f"{self.possible_duplicate.ticket_number} "
             f"({self.similarity_score})"
         )
+
 
 class ComplaintEvidence(models.Model):
     """
@@ -571,4 +591,80 @@ class ComplaintEvidence(models.Model):
         return (
             f"Evidence for {self.complaint.ticket_number} - "
             f"{self.original_filename}"
+        )
+
+
+class ComplaintResolutionFeedback(models.Model):
+    """
+    Citizen feedback submitted after a complaint is resolved.
+
+    A complaint may be resolved, reopened, and resolved again.
+    Each resolution cycle can therefore have its own feedback.
+    """
+
+    complaint = models.ForeignKey(
+        Complaint,
+        on_delete=models.CASCADE,
+        related_name="resolution_feedback",
+    )
+
+    citizen = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="resolution_feedback",
+    )
+
+    rating = models.PositiveSmallIntegerField()
+
+    comment = models.TextField(
+        blank=True,
+    )
+
+    resolution_cycle = models.PositiveIntegerField(
+        default=1,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(
+                    rating__gte=1,
+                    rating__lte=5,
+                ),
+                name="feedback_rating_between_1_5",
+            ),
+            models.UniqueConstraint(
+                fields=[
+                    "complaint",
+                    "resolution_cycle",
+                ],
+                name="unique_feedback_per_resolution_cycle",
+            ),
+        ]
+
+        indexes = [
+            models.Index(
+                fields=[
+                    "complaint",
+                    "-created_at",
+                ],
+                name="feedback_complaint_created_idx",
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"Feedback - "
+            f"{self.complaint.ticket_number} - "
+            f"{self.rating}/5"
         )
