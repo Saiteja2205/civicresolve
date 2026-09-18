@@ -2,303 +2,188 @@
 
 ## 1. Overview
 
-CivicResolve uses generative AI to analyze citizen complaints and assist with complaint triage.
-
-The initial AI pipeline focuses on understanding a natural-language complaint and converting it into structured operational information.
-
----
-
-## 2. Current AI Pipeline
-
-```mermaid
-flowchart LR
-    Input[Citizen Complaint]
-    Prompt[Structured AI Prompt]
-    Gemini[Gemini Model]
-    Output[AI Analysis]
-    Validator[Backend Validation]
-    Complaint[Complaint Workflow]
-
-    Input --> Prompt
-    Prompt --> Gemini
-    Gemini --> Output
-    Output --> Validator
-    Validator --> Complaint
-```
-
----
-
-## 3. AI Inputs
-
-The primary input is the citizen's complaint information.
-
-Examples include:
-
-* Complaint title
-* Complaint description
-* Selected category where available
-* Location information where relevant
-* Department/category context available from the database
-
----
-
-## 4. AI Outputs
-
-The current analysis can contain:
-
-```text
-summary
-predicted_category
-predicted_department
-predicted_priority
-urgency
-confidence
-model_name
-```
-
-These outputs are stored as complaint analysis data where applicable.
-
----
-
-## 5. Database-Aware Analysis
-
-The AI service can use available department and category information to improve routing consistency.
-
-This is important because the model should not freely invent department names.
-
-Instead, AI predictions are validated against the application's configured organizational data.
-
----
-
-## 6. Output Validation
-
-AI output is treated as untrusted external data.
-
-The backend validates the response before using it in the complaint workflow.
-
-Validation should verify:
-
-* Required fields exist
-* Category is valid
-* Department is valid
-* Priority is valid
-* Confidence is within an acceptable range
-* Output structure is valid
-
-Invalid or unusable output must not corrupt the complaint record.
-
----
-
-## 7. Failure Handling
-
-The AI provider is an external dependency.
-
-Potential failures include:
-
-* API unavailable
-* Request timeout
-* Invalid AI response
-* Rate limits
-* Network errors
-* Unexpected model output
-
-CivicResolve therefore includes failure handling so that an AI failure does not make the entire complaint-management system unusable.
-
----
-
-## 8. Human-in-the-Loop Principle
-
-AI is used primarily for assistance and triage.
-
-The system maintains human control over important operational actions.
-
-For example:
-
-```text
-AI
- ↓
-Recommendation
- ↓
-Validation
- ↓
-Officer/Admin workflow
- ↓
-Human decision
-```
-
-This becomes increasingly important as CivicResolve V2 adds AI-assisted resolution recommendations and SLA prediction.
-
----
-
-## 9. Current AI Provider
-
-The current implementation uses Google's Gemini API through the `google-genai` Python SDK.
-
-The application configuration should keep API credentials outside source control using environment variables.
-
----
-
-# 10. CivicResolve V2 AI Extensions
-
-## 10.1 Duplicate Complaint Detection
-
-The system will compare a new complaint with existing complaints and calculate similarity.
-
-```text
-New Complaint
-      ↓
-Semantic Representation
-      ↓
-Similarity Search
-      ↓
-Similarity Score
-      ↓
-Potential Duplicate
-```
-
-The system should distinguish between:
-
-* Exact duplicates
-* Highly similar complaints
-* Related but separate complaints
-* Unrelated complaints
-
----
-
-## 10.2 SLA-Breach Prediction
-
-V2 will introduce predictive SLA risk.
-
-Potential signals include:
-
-* Priority
-* Complaint age
-* Current status
-* Department
-* Officer workload
-* Time remaining
-* Historical resolution patterns
-
-The output can be represented as:
-
-```text
-LOW RISK
-MEDIUM RISK
-HIGH RISK
-```
-
-or as a calibrated probability where appropriate.
-
----
-
-## 10.3 Knowledge Base + Resolution Recommendation
-
-V2 will introduce a knowledge base containing approved operational guidance.
+CivicResolve isolates AI operations in backend services and uses a Gemini provider abstraction. The application requests structured JSON from the model and validates the result before persisting AI-derived fields.
 
 ```text
 Complaint
-    ↓
-Retrieve relevant knowledge
-    ↓
-Relevant documents/articles
-    ↓
-AI reasoning
-    ↓
-Suggested resolution
-    ↓
-Officer review
+   |
+   v
+AI orchestration
+   |
+   v
+Prompt construction
+   |
+   v
+Gemini provider
+   |
+   v
+JSON response
+   |
+   v
+Output validation
+   |
+   v
+Category fallback / persistence
+   |
+   v
+ComplaintAnalysis + complaint priority
 ```
 
-The AI recommendation will not automatically close complaints.
+## 2. Provider
 
----
+The current provider is `GeminiProvider` in `complaints/services/ai_provider.py`.
 
-## 10.4 Multimodal Complaints
+The configured primary model is `gemini-3.8-flash`, with fallback model names configured in the provider for provider/service failures.
 
-V2 will expand complaint input to potentially include:
+The provider uses:
 
-* Text
-* Images
-* Voice
+- Request timeout protection
+- Retry handling
+- Model fallback handling
+- Structured JSON response configuration
+- Separate text and image generation paths
 
-The system will combine available information before producing the complaint analysis.
+## 3. Complaint Analysis
 
-Example:
+`ai_orchestration_service.run_ai_analysis()` moves a complaint into `AI_ANALYZING`, calls the analysis service, and keeps the complaint in the analysis workflow so routing and assignment can continue.
+
+If the AI provider fails, the orchestration layer returns the complaint to `SUBMITTED` and records the failure transition through complaint history.
+
+## 4. Prompt Inputs
+
+The complaint analysis prompt includes:
+
+- Complaint title
+- Complaint description
+- Location
+- Citizen-selected category when present
+- Active departments
+- Active categories
+
+The model is instructed to produce structured fields for language, English normalization, summary, explanation, category, department, priority, urgency, and confidence.
+
+## 5. Multilingual Analysis
+
+The multilingual complaint analysis flow is designed around preservation of the original citizen text.
 
 ```text
-Image
-+
-Voice description
-+
-Text
-      ↓
-Multimodal AI analysis
-      ↓
-Structured complaint
+Original complaint
+       |
+       +------------------------------+
+       |                              |
+       v                              v
+Complaint.title              Complaint.description
+       |                              |
+       +--------------+---------------+
+                      |
+                      v
+                 Gemini analysis
+                      |
+          +-----------+-----------+
+          |                       |
+          v                       v
+ detected_language         English representation
+                                  |
+                         +--------+--------+
+                         |                 |
+                         v                 v
+                  english_title   english_description
 ```
 
----
+The English representation is stored on `ComplaintAnalysis` rather than replacing the citizen's original content.
 
-## 10.5 Smart Workload Balancing
+## 6. Validation
 
-The assignment engine will eventually consider more than active complaint count.
+The backend validates:
 
-Potential factors include:
+- Required analysis fields
+- Summary and explanation type and length
+- Priority against the supported priority choices
+- Category and department IDs
+- Category/department consistency
+- Urgency range
+- Confidence range
+- Detected-language type and length
+- English title and description type and length
 
-* Department
-* Current workload
-* Category expertise
-* Previous workload
-* Complaint priority
-* SLA risk
-* Availability
+If a predicted category is missing, the backend can use the complaint's selected category as a fallback when it is valid and active.
 
-The result will be a suitability score used to support assignment.
+## 7. Voice Processing
 
----
+Voice complaint processing has a separate service because the input is a speech transcript rather than a saved complaint.
 
-## 10.6 Notifications
+```text
+Browser Speech Recognition
+          |
+          v
+Transcript
+          |
+          v
+POST /api/voice-translation/
+          |
+          v
+Voice translation service
+          |
+          v
+Gemini
+          |
+          v
+Language + English title + English description
+          |
+          v
+Editable complaint form
+```
 
-AI and workflow events will eventually trigger notifications for:
+The current browser configuration requests `en-IN`. The backend translation service can interpret multilingual or transliterated transcript text, but actual speech-to-text language support remains dependent on the browser recognition implementation.
 
-* New assignments
-* SLA warnings
-* Escalations
-* Resolution
-* Reopening
-* Other important complaint events
+## 8. Evidence AI
 
----
+Evidence images are validated before analysis. The evidence AI service sends complaint context and image bytes to Gemini's multimodal generation path.
+
+Structured output includes:
+
+- Evidence type
+- Observations
+- Severity score
+- Confidence score
+- Complaint consistency
+- Analysis explanation
+
+The original evidence image remains stored independently of the AI result.
+
+## 9. Embeddings and Duplicate Detection
+
+Complaint text is converted to a 768-dimensional embedding using `gemini-embedding-001`.
+
+The embedding is stored in `ComplaintEmbedding` and used with pgvector cosine distance.
+
+The duplicate detector currently uses a default similarity threshold of `0.85`, a default maximum of five results, and a default lookback period of 180 days.
+
+Duplicate detection is advisory. It does not automatically reject, delete, close, or otherwise change a complaint.
+
+## 10. Resolution Assistant
+
+The resolution assistant uses:
+
+- Complaint information
+- Category and department
+- Existing AI analysis
+- Complaint history
+- Evidence analysis
+- SLA information
+
+The output contains:
+
+- Resolution draft
+- Recommended actions
+- Citizen response draft
+- Confidence score
+- Basis
+
+The prompt explicitly prevents the assistant from claiming that unverified actions have already been completed.
 
 ## 11. AI Evaluation
 
-The V2 AI components must be evaluated using test data rather than being judged only by visual inspection.
+The `ai-evaluation/` endpoint runs the configured benchmark cases through the AI evaluation service. The endpoint is administrator-only.
 
-Potential metrics include:
-
-### Classification
-
-* Accuracy
-* Precision
-* Recall
-* F1-score
-
-### Duplicate Detection
-
-* Precision
-* Recall
-* F1-score
-
-### SLA Prediction
-
-Depending on the final modeling approach:
-
-* Accuracy
-* Precision
-* Recall
-* F1-score
-* ROC-AUC where appropriate
-
-Actual results will be recorded after implementation and evaluation.
-
-No evaluation metric should be claimed without measured evidence.
+The project also contains benchmark and evaluation service modules so AI behavior can be evaluated separately from normal complaint processing.

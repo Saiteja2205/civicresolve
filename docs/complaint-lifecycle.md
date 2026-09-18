@@ -1,250 +1,168 @@
 # CivicResolve — Complaint Lifecycle
 
-## 1. Purpose
+## 1. State Model
 
-The complaint lifecycle defines how a complaint moves through CivicResolve from initial citizen submission to final closure.
+The backend defines these complaint statuses:
 
-The lifecycle is controlled by backend business rules so that invalid status transitions cannot be performed through the API.
-
----
-
-## 2. Lifecycle
-
-```mermaid
-stateDiagram-v2
-    [*] --> SUBMITTED
-
-    SUBMITTED --> AI_ANALYZING
-    SUBMITTED --> ASSIGNED
-    SUBMITTED --> REJECTED
-
-    AI_ANALYZING --> ASSIGNED
-    AI_ANALYZING --> SUBMITTED
-
-    ASSIGNED --> ACKNOWLEDGED
-
-    ACKNOWLEDGED --> IN_PROGRESS
-
-    IN_PROGRESS --> NEEDS_INFORMATION
-    IN_PROGRESS --> ESCALATED
-    IN_PROGRESS --> RESOLVED
-
-    NEEDS_INFORMATION --> IN_PROGRESS
-
-    ESCALATED --> IN_PROGRESS
-    ESCALATED --> RESOLVED
-
-    RESOLVED --> CLOSED
-    RESOLVED --> REOPENED
-
-    REOPENED --> ASSIGNED
-
-    CLOSED --> [*]
-    REJECTED --> [*]
+```text
+SUBMITTED
+AI_ANALYZING
+ASSIGNED
+ACKNOWLEDGED
+IN_PROGRESS
+NEEDS_INFORMATION
+ESCALATED
+RESOLVED
+CLOSED
+REOPENED
+REJECTED
 ```
 
----
+## 2. Valid Transitions
+
+```text
+SUBMITTED
+├── AI_ANALYZING
+├── ASSIGNED
+└── REJECTED
+
+AI_ANALYZING
+├── ASSIGNED
+└── SUBMITTED
+
+ASSIGNED
+└── ACKNOWLEDGED
+
+ACKNOWLEDGED
+└── IN_PROGRESS
+
+IN_PROGRESS
+├── RESOLVED
+├── NEEDS_INFORMATION
+└── ESCALATED
+
+NEEDS_INFORMATION
+└── IN_PROGRESS
+
+ESCALATED
+├── IN_PROGRESS
+└── RESOLVED
+
+RESOLVED
+├── CLOSED
+└── REOPENED
+
+REOPENED
+└── ASSIGNED
+
+CLOSED
+└── no transition
+
+REJECTED
+└── no transition
+```
 
 ## 3. Submission
 
-The citizen submits:
+A citizen submits a complaint with a title, description, category, and optional location data.
 
-* Title
-* Description
-* Category
-* Location information where available
-
-The backend validates the request before creating the complaint.
-
-A unique ticket number is generated for each complaint.
-
-Example:
-
-```text
-CR-000020
-```
-
----
+The complaint is created with `SUBMITTED` status. The complaint-creation service starts the downstream AI/routing workflow according to the configured application flow.
 
 ## 4. AI Analysis
 
-After complaint creation, AI analysis can determine:
+The complaint enters `AI_ANALYZING` while AI analysis is generated.
 
-* Summary
-* Category
-* Department
-* Priority
-* Urgency
-* Confidence
+The analysis can determine:
 
-The result is validated before being used by the workflow.
+- Language
+- English normalized content
+- Summary
+- Explanation
+- Category
+- Department
+- Priority
+- Urgency
+- Confidence
 
----
+If AI analysis fails, the orchestration service can return the complaint to `SUBMITTED` rather than leaving the complaint permanently in the analysis state.
 
-## 5. Department Routing
+## 5. Assignment
 
-The predicted category is associated with a department.
+After routing, an administrator can assign the complaint to an officer and department.
 
-Examples:
+The assignment model records who created the assignment and whether the assignment remains active.
 
-```text
-Wi-Fi
-   ↓
-IT Support
+## 6. Officer Processing
 
-Electrical
-   ↓
-Maintenance
-
-Food
-   ↓
-Hostel
-
-Bus
-   ↓
-Transport
-
-CCTV
-   ↓
-Security
-```
-
----
-
-## 6. Officer Assignment
-
-An eligible active officer is selected from the appropriate department.
-
-Assignment rules include:
-
-* Officer must be active
-* Officer must belong to the required department
-* Complaint must be eligible for assignment
-* Administrative permissions are required for manual assignment
-
----
-
-## 7. Acknowledgement
-
-The assigned officer acknowledges the complaint.
+The officer workflow is:
 
 ```text
 ASSIGNED
-   ↓
+   |
+   v
 ACKNOWLEDGED
-```
-
----
-
-## 8. Processing
-
-The officer starts work on the complaint.
-
-```text
-ACKNOWLEDGED
-   ↓
+   |
+   v
 IN_PROGRESS
 ```
 
-A complaint may require additional information or may be escalated.
+From `IN_PROGRESS`, the complaint can be resolved, moved to `NEEDS_INFORMATION`, or escalated.
 
----
+## 7. Resolution
 
-## 9. Resolution
+When a complaint reaches `RESOLVED`, `resolved_at` is recorded.
 
-After completing the work:
+The citizen can then provide resolution feedback.
+
+An administrator can close a resolved complaint, setting `closed_at`.
+
+## 8. Resolution Feedback
+
+Feedback is stored with a `resolution_cycle`.
+
+This allows a complaint to have a separate feedback record for each completed resolution cycle.
 
 ```text
-IN_PROGRESS
-   ↓
+Cycle 1
 RESOLVED
+  |
+  +--> Feedback
+  |
+  +--> REOPENED
+          |
+          v
+       ASSIGNED
+          |
+          v
+       ACKNOWLEDGED
+          |
+          v
+       IN_PROGRESS
+          |
+          v
+       RESOLVED
+          |
+          +--> Cycle 2 Feedback
 ```
 
-The resolution timestamp is recorded.
+A feedback record is unique per complaint per resolution cycle and ratings are limited to 1–5.
 
----
+## 9. Reopening
 
-## 10. Closure
+Only a citizen who owns the complaint can request reopening, and the complaint must be `RESOLVED`.
 
-An administrator can close an eligible resolved complaint.
+The citizen must provide a reopening explanation of at least 10 characters.
 
-```text
-RESOLVED
-   ↓
-CLOSED
-```
+If an active assignment exists, the complaint is moved through `REOPENED` back to `ASSIGNED` for the existing officer. If there is no active assignment, the complaint remains `REOPENED` until reassignment.
 
-The closure timestamp is recorded.
+## 10. Audit Trail
 
----
+Every status transition is recorded in `ComplaintHistory` with:
 
-## 11. Reopening
+- Old status
+- New status
+- User or system actor
+- Comment
+- Timestamp
 
-A citizen can provide resolution feedback.
-
-If the issue has not actually been resolved, the complaint can be reopened where permitted:
-
-```text
-RESOLVED
-   ↓
-REOPENED
-   ↓
-ASSIGNED
-```
-
-This sends the complaint back into the operational workflow.
-
----
-
-## 12. Audit History
-
-Important status changes create complaint history records.
-
-Each record can capture:
-
-* Complaint
-* Previous status
-* New status
-* User who performed the change
-* Comment
-* Timestamp
-
-This allows the system to reconstruct the operational history of a complaint.
-
----
-
-## 13. SLA Interaction
-
-The SLA system operates alongside the complaint lifecycle.
-
-```text
-Complaint
-    ↓
-Priority
-    ↓
-SLA Policy
-    ↓
-Response Deadline
-    ↓
-Resolution Deadline
-    ↓
-Monitoring
-    ↓
-Escalation when required
-```
-
----
-
-## 14. Design Principle
-
-The complaint lifecycle is intentionally explicit.
-
-The system does not allow arbitrary status changes such as:
-
-```text
-SUBMITTED → CLOSED
-```
-
-unless that transition is explicitly supported by the workflow rules.
-
-This protects data integrity and makes the workflow predictable and testable.
+Notifications are generated for complaint status changes and other operational events through the notification service.

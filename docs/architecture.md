@@ -1,16 +1,8 @@
 # CivicResolve — System Architecture
 
-## 1. Overview
+## 1. Architecture Overview
 
-CivicResolve is an AI-powered grievance management and resolution platform designed to streamline the complete lifecycle of citizen complaints.
-
-The system allows authenticated citizens to submit complaints, uses AI to analyze and classify them, routes complaints to the appropriate department, assigns them to officers, monitors SLA deadlines, supports resolution workflows, and provides administrators with analytics and oversight.
-
-The platform currently uses a React/Vite frontend and a Django REST Framework backend.
-
----
-
-## 2. High-Level Architecture
+CivicResolve follows a client-server architecture. The React/Vite frontend provides role-specific interfaces and communicates with the Django REST Framework backend over HTTP. The backend enforces authentication, authorization, complaint workflow rules, AI processing, assignment, SLA handling, notifications, and persistence.
 
 ```mermaid
 flowchart TB
@@ -18,384 +10,147 @@ flowchart TB
     Officer[Officer]
     Admin[Administrator]
 
-    Frontend[React + Vite Frontend]
-    API[Django REST Framework API]
-
-    Auth[Authentication & Authorization]
-    Complaint[Complaint Management]
-    Workflow[Workflow Engine]
-    Assignment[Officer Assignment]
-    SLA[SLA Engine]
-    Analytics[Analytics]
-    Activity[Audit & Activity]
-
-    AI[Gemini AI Service]
-    DB[(Database)]
+    Frontend[React + Vite]
+    API[Django REST Framework]
+    Auth[JWT Authentication and RBAC]
+    Complaints[Complaint Management]
+    AI[Gemini AI Services]
+    Workflow[Status Workflow]
+    Assignment[Assignment and Routing]
+    SLA[SLA and Risk]
+    Evidence[Evidence and Vision Analysis]
+    Duplicate[Embeddings and Duplicate Detection]
+    Feedback[Resolution Feedback and Reopen]
+    Notifications[Notifications]
+    DB[(SQLite / PostgreSQL)]
+    Vector[(pgvector)]
+    Media[(Media Storage)]
 
     Citizen --> Frontend
     Officer --> Frontend
     Admin --> Frontend
-
     Frontend --> API
-
     API --> Auth
-    API --> Complaint
+    API --> Complaints
     API --> Workflow
     API --> Assignment
     API --> SLA
-    API --> Analytics
-    API --> Activity
-
-    Complaint --> AI
-    AI --> Complaint
-
-    Complaint --> DB
+    API --> Evidence
+    API --> Duplicate
+    API --> Feedback
+    API --> Notifications
+    Complaints --> AI
+    Evidence --> AI
+    Duplicate --> AI
+    AI --> Complaints
+    Complaints --> DB
     Workflow --> DB
     Assignment --> DB
     SLA --> DB
-    Analytics --> DB
-    Activity --> DB
+    Feedback --> DB
+    Notifications --> DB
+    Duplicate --> Vector
+    Evidence --> Media
 ```
 
----
+## 2. Frontend Architecture
 
-## 3. Frontend Architecture
-
-The frontend is implemented using React and Vite.
-
-Major responsibilities include:
-
-* Authentication interface
-* Role-based navigation
-* Citizen dashboard
-* Officer workspace
-* Administrator dashboard
-* Complaint submission
-* Complaint tracking
-* Complaint details
-* SLA monitoring
-* Analytics
-* Profile
-* Activity center
-* Loading, error and empty states
-* Responsive UI
-
-The frontend communicates with the backend through REST APIs.
-
-### Frontend structure
+The frontend is organized around pages, reusable components, authentication context, API service modules, layouts, and CSS files.
 
 ```text
-frontend/
-└── src/
-    ├── components/
-    ├── context/
-    ├── layouts/
-    ├── pages/
-    ├── services/
-    ├── styles/
-    ├── App.jsx
-    └── main.jsx
+frontend/src/
+├── components/
+├── context/
+├── layouts/
+├── pages/
+├── services/
+├── styles/
+├── App.jsx
+└── main.jsx
 ```
 
----
+### Context
+
+`AuthContext.jsx` maintains the current access token, refresh token, authenticated user, authentication state, and login/logout operations.
+
+### Services
+
+Axios is configured in `services/api.js`. Feature-specific service modules call backend endpoints for authentication, complaints, notifications, and user operations.
+
+### Pages
+
+Current application pages include:
+
+- Login
+- Citizen dashboard
+- Officer dashboard
+- Administrator dashboard
+- Analytics dashboard
+- SLA dashboard
+- Complaint list
+- Complaint creation
+- Complaint details
+- Profile
+- Activity
+
+## 3. Routing and Access Control
+
+React routes use protected and role-aware route wrappers. The frontend routes users to the dashboard appropriate to their role.
+
+Backend permissions remain authoritative. Frontend route restrictions are a user-interface layer and are not treated as the security boundary.
 
 ## 4. Backend Architecture
 
-The backend is implemented using Django and Django REST Framework.
-
-Major responsibilities include:
-
-* Authentication
-* Authorization
-* User and role management
-* Department and category management
-* Complaint creation
-* AI analysis
-* Department routing
-* Officer assignment
-* Complaint state transitions
-* Audit history
-* SLA calculation
-* SLA monitoring
-* Escalation
-* Analytics
-* Activity tracking
-
-### Backend structure
+The backend is divided into Django applications:
 
 ```text
 backend/
 ├── accounts/
-├── complaints/
 ├── organizations/
-├── config/
-└── manage.py
+├── complaints/
+├── notifications/
+└── config/
 ```
 
----
-
-## 5. User Roles
-
-CivicResolve supports three primary roles.
-
-### Citizen
-
-Citizens can:
-
-* Submit complaints
-* View their complaints
-* Track complaint status
-* View complaint history
-* Provide resolution feedback
-* Reopen eligible resolved complaints
-* Manage their profile
-* View their activity
-
-### Officer
-
-Officers can:
-
-* View complaints assigned to them
-* Acknowledge complaints
-* Start complaint processing
-* Resolve complaints
-* View complaint information
-* Follow the complaint workflow
-
-### Administrator
-
-Administrators can:
-
-* View all complaints
-* Assign complaints
-* Reassign complaints
-* Monitor SLA status
-* Close resolved complaints
-* View analytics
-* Manage operational workflows
-
-Authorization is enforced on the backend rather than relying only on frontend navigation.
-
----
-
-## 6. Complaint Processing Flow
-
-```mermaid
-flowchart TD
-    A[Citizen submits complaint]
-    B[Validate complaint]
-    C[Create complaint]
-    D[AI analysis]
-    E[Predict category]
-    F[Predict department]
-    G[Predict priority]
-    H[Generate summary]
-    I[Route to department]
-    J[Select officer]
-    K[Calculate SLA]
-    L[Officer processes complaint]
-    M[Resolution]
-    N[Admin closure]
-
-    A --> B
-    B --> C
-    C --> D
-    D --> E
-    D --> F
-    D --> G
-    D --> H
-    E --> I
-    F --> I
-    I --> J
-    J --> K
-    K --> L
-    L --> M
-    M --> N
-```
+### accounts
 
----
-
-## 7. Complaint State Machine
+Provides the custom email-based user model, profile operations, authentication-related views, and role information.
 
-Complaints follow controlled state transitions.
+### organizations
 
-```text
-SUBMITTED
-    ↓
-AI_ANALYZING
-    ↓
-ASSIGNED
-    ↓
-ACKNOWLEDGED
-    ↓
-IN_PROGRESS
-    ├──→ NEEDS_INFORMATION
-    │         ↓
-    │    IN_PROGRESS
-    │
-    ├──→ ESCALATED
-    │         ↓
-    │    IN_PROGRESS
-    │
-    └──→ RESOLVED
-              ├──→ CLOSED
-              └──→ REOPENED
-                         ↓
-                     ASSIGNED
-```
+Stores departments and complaint categories and provides active department, category, and officer APIs.
 
-Invalid state transitions are rejected by the backend workflow service.
+### complaints
 
----
+Contains the primary complaint domain, AI analysis, assignments, status history, SLA records, embeddings, duplicate candidates, evidence, resolution feedback, and complaint-related APIs/services.
 
-## 8. AI Integration
+### notifications
 
-CivicResolve currently uses Google's Gemini API for complaint analysis.
+Stores in-app notifications and provides list/read/read-all operations.
 
-The AI layer is responsible for interpreting natural-language complaints and producing structured analysis including:
+## 5. AI Service Boundary
 
-* Summary
-* Predicted category
-* Predicted department
-* Priority
-* Urgency
-* Confidence
-* Model information
+AI functionality is separated into services rather than being embedded directly in views.
 
-The backend validates AI output before applying it to the complaint workflow.
+The current provider implementation is `GeminiProvider`. It supports text generation and multimodal image generation and contains timeout, retry, and fallback handling.
 
-AI failure handling is implemented so that an external AI failure does not leave complaint creation in an unusable state.
+## 6. Data and Storage
 
----
+The application can use SQLite locally. When `DATABASE_URL` is supplied, Django parses the URL and uses that database configuration. The semantic embedding model uses pgvector and therefore requires PostgreSQL/pgvector support for the complete vector workflow.
 
-## 9. SLA Architecture
+Complaint evidence is stored through Django's media storage configuration.
 
-Each complaint can receive an SLA based on its priority.
+## 7. Security Architecture
 
-The SLA system tracks:
+The backend uses:
 
-* Response deadline
-* Resolution deadline
-* Response completion
-* Resolution completion
-* Response breach
-* Resolution breach
+- JWT authentication
+- Role-specific permission classes
+- Queryset filtering by authenticated user or assignment
+- Django password validation
+- CORS and CSRF configuration
+- Secure-cookie and HTTPS-related production settings
+- HTTP security headers
+- API throttling
 
-SLA monitoring can identify complaints approaching or exceeding their configured deadlines.
-
----
-
-## 10. Auditability
-
-Important complaint state changes are recorded in complaint history.
-
-History can contain:
-
-* Previous status
-* New status
-* User responsible for the change
-* Comment
-* Timestamp
-
-This provides an operational audit trail for complaint processing.
-
----
-
-## 11. Security Model
-
-The backend is the authoritative security layer.
-
-Security responsibilities include:
-
-* Authentication
-* Role-based authorization
-* Object-level access control
-* Request validation
-* Environment-based secret management
-* Controlled CORS configuration
-* Protected administrative operations
-
-The production security configuration will be reviewed before deployment.
-
----
-
-## 12. Current Technology Stack
-
-### Frontend
-
-* React
-* Vite
-* React Router
-* Axios
-* CSS
-
-### Backend
-
-* Python
-* Django
-* Django REST Framework
-* JWT authentication
-* SQLite during development
-
-### AI
-
-* Google Gemini
-* `google-genai`
-
-### Supporting Technologies
-
-* Git
-* GitHub
-* REST APIs
-* Environment variables
-
----
-
-## 13. Production Target Architecture
-
-The production architecture is expected to use:
-
-```text
-User
-  ↓
-Production React Frontend
-  ↓ HTTPS
-Django REST API
-  ↓
-PostgreSQL
-  │
-  └── Gemini API
-```
-
-SQLite is suitable for early development and testing, while PostgreSQL is the planned production database.
-
----
-
-## 14. V2 Extension Architecture
-
-CivicResolve V2 will extend the existing architecture with:
-
-1. Duplicate complaint detection
-2. AI SLA-breach prediction
-3. Knowledge base and AI resolution recommendations
-4. Multimodal complaint submission
-5. Smart officer workload balancing
-6. Notifications
-
-These components will be added incrementally rather than restructuring the entire system.
-
----
-
-## 15. Engineering Principles
-
-CivicResolve follows these principles:
-
-* Backend-enforced authorization
-* Explicit complaint state transitions
-* Separation of business logic into services
-* Validation of external AI output
-* Auditability of important workflow changes
-* Environment-based configuration
-* Incremental feature development
-* Testable business logic
-* Production-oriented architecture
+The backend is the final authorization boundary.

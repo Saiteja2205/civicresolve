@@ -1,100 +1,60 @@
-# CivicResolve - Database Design
+# CivicResolve — Database Design
 
 ## 1. Overview
 
-CivicResolve uses a relational database model to represent users,
-organizational structure, complaints, AI analysis, assignments,
-complaint history, SLA information and operational workflows.
+The data model separates identity, organizational data, complaints, AI analysis, assignments, workflow history, SLA records, semantic data, evidence, feedback, and notifications.
 
-The database is designed around the complaint as the central business
-entity.
+## 2. Main Entities
 
----
+### User
 
-## 2. User
+Stores application users using email as the login identifier.
 
-The application uses a custom Django user model.
+Key fields:
 
-### Important fields
-
-- `id`
 - `email`
 - `phone`
 - `role`
 - `department`
 - Django authentication fields
 
-### Roles
+Roles:
 
 - `USER`
 - `OFFICER`
 - `ADMIN`
 
-The user's email is used as the authentication identifier.
+### Department
 
----
+Stores operational departments.
 
-## 3. Department
+Key fields:
 
-A Department represents an operational department responsible for
-handling complaints.
-
-### Important fields
-
-- `id`
 - `name`
 - `description`
 - `is_active`
-- `created_at`
-- `updated_at`
+- timestamps
 
-Examples:
+### Category
 
-- IT Support
-- Maintenance
-- Hostel
-- Transport
-- Security
+Stores complaint categories linked to departments.
 
----
+Key fields:
 
-## 4. Category
-
-A Category represents a complaint classification and belongs to a
-Department.
-
-### Important fields
-
-- `id`
 - `name`
 - `description`
 - `department`
 - `is_active`
-- `created_at`
-- `updated_at`
+- timestamps
 
-Examples:
+A database constraint prevents duplicate category names within the same department.
 
-- Wi-Fi → IT Support
-- Network → IT Support
-- Electrical → Maintenance
-- Plumbing → Maintenance
-- Food → Hostel
-- Bus → Transport
-- CCTV → Security
+### Complaint
 
-A database constraint prevents duplicate category names within the
-same department.
+The central business entity.
 
----
+Key fields:
 
-## 5. Complaint
-
-Complaint is the central business entity in CivicResolve.
-
-### Important fields
-
-- `id`
 - `ticket_number`
 - `user`
 - `category`
@@ -110,45 +70,46 @@ Complaint is the central business entity in CivicResolve.
 - `resolved_at`
 - `closed_at`
 
-### Status values
+Ticket numbers are generated in the `CR-000001` style.
 
-- `SUBMITTED`
-- `AI_ANALYZING`
-- `ASSIGNED`
-- `ACKNOWLEDGED`
-- `IN_PROGRESS`
-- `NEEDS_INFORMATION`
-- `ESCALATED`
-- `RESOLVED`
-- `CLOSED`
-- `REOPENED`
-- `REJECTED`
+## 3. Complaint Analysis
 
-### Priority values
+`ComplaintAnalysis` is a one-to-one extension of a complaint.
 
-- `LOW`
-- `MEDIUM`
-- `HIGH`
-- `CRITICAL`
+Key fields:
 
-### Ticket number
+- `summary`
+- `explanation`
+- `detected_language`
+- `english_title`
+- `english_description`
+- `predicted_category`
+- `predicted_department`
+- `predicted_priority`
+- `urgency_score`
+- `confidence_score`
+- `model_name`
+- timestamps
 
-Each complaint receives a unique ticket number.
+The multilingual fields are deliberately separate from the original complaint fields.
 
-Example:
+```text
+Complaint
+├── title
+└── description
 
-`CR-000020`
+ComplaintAnalysis
+├── detected_language
+├── english_title
+└── english_description
+```
 
----
+## 4. Complaint Assignment
 
-## 6. Complaint Assignment
+`ComplaintAssignment` records which officer and department are associated with a complaint.
 
-ComplaintAssignment records the assignment of a complaint to an
-officer and department.
+Fields include:
 
-### Important fields
-
-- `id`
 - `complaint`
 - `department`
 - `officer`
@@ -157,18 +118,14 @@ officer and department.
 - `unassigned_at`
 - `reason`
 
-The assignment model also supports reassignment by retaining assignment
-history.
+An active assignment is represented by a null `unassigned_at` value.
 
----
+## 5. Complaint History
 
-## 7. Complaint History
+`ComplaintHistory` provides an audit trail for status changes.
 
-ComplaintHistory stores the audit trail of complaint status changes.
+Fields include:
 
-### Important fields
-
-- `id`
 - `complaint`
 - `changed_by`
 - `old_status`
@@ -176,56 +133,28 @@ ComplaintHistory stores the audit trail of complaint status changes.
 - `comment`
 - `created_at`
 
-This allows the system to track how a complaint progressed through its
-lifecycle.
+The history is ordered chronologically.
 
----
+## 6. SLA Data
 
-## 8. Complaint Analysis
+### SLAPolicy
 
-ComplaintAnalysis stores the result of AI-based complaint analysis.
+Stores priority-specific response and resolution targets.
 
-### Important fields
+Fields:
 
-- `id`
-- `complaint`
-- `summary`
-- `predicted_category`
-- `predicted_department`
-- `predicted_priority`
-- `urgency`
-- `confidence`
-- `model_name`
-
-The AI analysis is stored separately from the core Complaint entity.
-
-This keeps AI-specific information isolated from the main complaint
-record.
-
----
-
-## 9. SLA Policy
-
-SLAPolicy defines the response and resolution time limits for each
-priority level.
-
-### Important fields
-
-- `id`
 - `priority`
 - `response_time_hours`
 - `resolution_time_hours`
-- `active`
+- `is_active`
+- timestamps
 
----
+### ComplaintSLA
 
-## 10. Complaint SLA
+Stores SLA deadlines and completion/breach state for a complaint.
 
-ComplaintSLA stores the SLA information associated with a complaint.
+Fields:
 
-### Important fields
-
-- `id`
 - `complaint`
 - `policy`
 - `response_deadline`
@@ -234,120 +163,137 @@ ComplaintSLA stores the SLA information associated with a complaint.
 - `resolution_completed_at`
 - `response_breached`
 - `resolution_breached`
+- timestamps
 
-This allows CivicResolve to monitor both response and resolution SLA
-compliance.
+## 7. Vector and Duplicate Data
 
----
+### ComplaintEmbedding
 
-## 11. Notification
+Stores one semantic embedding per complaint.
 
-Notifications are part of the planned CivicResolve V2 functionality.
+Fields:
 
-The planned Notification entity will support:
+- `complaint`
+- `embedding`
+- `embedding_model`
+- `source_text_hash`
+- timestamps
 
-- Recipient
-- Complaint
-- Notification type
-- Message
-- Read/unread state
-- Creation timestamp
+The vector field is configured for 768 dimensions.
 
-Notifications will be used for events such as:
+### ComplaintDuplicate
 
-- New complaint assignment
-- SLA warnings
-- SLA breaches
-- Escalations
-- Complaint resolution
-- Complaint reopening
+Stores a candidate relationship between complaints.
 
-This entity will be implemented during the V2 Notifications phase.
+Fields include:
 
----
+- `complaint`
+- `possible_duplicate`
+- `similarity_score`
+- `detection_threshold`
+- `embedding_model`
+- `status`
+- `detected_at`
+- `updated_at`
+- `reviewed_by`
+- `reviewed_at`
+- `review_comment`
 
-## 12. Feedback
+Review states are `PENDING`, `CONFIRMED`, and `REJECTED`.
 
-Citizen resolution feedback is part of the complaint resolution
-workflow.
+## 8. Evidence
 
-Feedback functionality is associated with the resolution/reopen
-process.
+`ComplaintEvidence` stores uploaded complaint images and structured AI analysis.
 
-The exact V2 database representation will be documented after the
-feedback implementation is finalized.
+Stored metadata includes:
 
----
+- Original filename
+- Content type
+- File size
+- Uploaded user
+- Upload time
+- Evidence type
+- Observations
+- Severity score
+- Confidence score
+- Complaint consistency
+- AI explanation
+- AI model
+- Analysis timestamp
 
-## 13. V2 Planned Database Extensions
+The original image is retained independently of AI analysis.
 
-The following entities are planned for CivicResolve V2.
+## 9. Resolution Feedback
 
-### Duplicate Detection
+`ComplaintResolutionFeedback` stores citizen feedback after resolution.
 
-Potential entities:
+Fields:
 
-- `ComplaintSimilarity`
-- `ComplaintCluster`
+- `complaint`
+- `citizen`
+- `rating`
+- `comment`
+- `resolution_cycle`
+- `created_at`
+- `updated_at`
 
-These will support semantic similarity and grouping of related
-complaints.
+Constraints enforce a rating from 1 to 5 and one feedback record per complaint per resolution cycle.
 
-### SLA Prediction
-
-Potential entity:
-
-- `SLARiskPrediction`
-
-Possible information:
-
-- Complaint
-- Risk score
-- Risk level
-- Model version
-- Prediction timestamp
-
-### Knowledge Base
-
-Potential entities:
-
-- `KnowledgeArticle`
-- `KnowledgeCategory`
-
-These will store approved operational knowledge used by the AI
-resolution recommendation system.
-
-### Multimodal Complaints
-
-The complaint model/storage layer will be extended to support uploaded
-media such as images and audio.
-
-The exact storage design will be finalized during implementation.
-
----
-
-## 14. Relationships
-
-The core relationships are:
+This supports:
 
 ```text
-User
- │
- ├── Department
- │
- └── Complaint
-       │
-       ├── Category
-       │      └── Department
-       │
-       ├── ComplaintAnalysis
-       │
-       ├── ComplaintAssignment
-       │      ├── Officer
-       │      └── Department
-       │
-       ├── ComplaintHistory
-       │      └── User
-       │
-       └── ComplaintSLA
-              └── SLAPolicy
+Resolution cycle 1
+    feedback 1
+        |
+        v
+     reopen
+        |
+        v
+Resolution cycle 2
+    feedback 2
+```
+
+## 10. Notifications
+
+`Notification` stores in-app notifications for users.
+
+Key fields:
+
+- `recipient`
+- `notification_type`
+- `title`
+- `message`
+- `complaint`
+- `metadata`
+- `is_read`
+- `created_at`
+- `read_at`
+
+Indexes support recipient/read-state and recipient/time queries.
+
+## 11. Relationship Summary
+
+```text
+User 1 ─── * Complaint
+User 1 ─── * Notification
+User 1 ─── * ComplaintAssignment
+User 1 ─── * ComplaintHistory
+User 1 ─── * ComplaintEvidence
+User 1 ─── * ComplaintResolutionFeedback
+
+Department 1 ─── * Category
+Department 1 ─── * ComplaintAssignment
+
+Category 1 ─── * Complaint
+Category 1 ─── * ComplaintAnalysis
+
+Complaint 1 ─── 1 ComplaintAnalysis
+Complaint 1 ─── * ComplaintAssignment
+Complaint 1 ─── * ComplaintHistory
+Complaint 1 ─── 1 ComplaintSLA
+Complaint 1 ─── 1 ComplaintEmbedding
+Complaint 1 ─── * ComplaintDuplicate
+Complaint 1 ─── * ComplaintEvidence
+Complaint 1 ─── * ComplaintResolutionFeedback
+Complaint 1 ─── * Notification
+```
