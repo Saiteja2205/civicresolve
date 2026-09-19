@@ -1,150 +1,142 @@
 .complaint-sla-risk-card {
   margin-bottom: 24px;
-  padding: 28px;
-  border: 1px solid #dfe5ec;
-  border-radius: 18px;
+  padding: 26px;
+  border: 1px solid #dfe7ee;
+  border-radius: 16px;
   background: #ffffff;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  box-shadow:
+    0 8px 28px rgba(15, 23, 42, 0.045),
+    0 1px 3px rgba(15, 23, 42, 0.025);
 }
-
 
 .complaint-sla-risk-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 24px;
+  padding-bottom: 21px;
+  border-bottom: 1px solid #edf1f4;
 }
-
 
 .complaint-sla-risk-eyebrow {
-  margin: 0 0 6px;
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  color: #64748b;
+  margin: 0 0 7px;
+  color: #0f7f87;
+  font-size: 0.64rem;
+  font-weight: 850;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
 }
-
 
 .complaint-sla-risk-header h2 {
   margin: 0;
-  font-size: 1.35rem;
-  color: #0f172a;
+  color: #17233a;
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
 }
 
-
 .complaint-sla-risk-description {
-  max-width: 620px;
-  margin: 8px 0 0;
-  color: #64748b;
-  font-size: 0.9rem;
+  max-width: 650px;
+  margin: 7px 0 0;
+  color: #718096;
+  font-size: 0.78rem;
   line-height: 1.55;
 }
 
-
 .complaint-sla-risk-badge {
-  min-width: 88px;
-  padding: 12px 14px;
-  border-radius: 14px;
-  text-align: center;
+  min-width: 96px;
+  padding: 10px 14px;
   border: 1px solid transparent;
+  border-radius: 11px;
+  text-align: center;
 }
-
 
 .complaint-sla-risk-badge span {
   display: block;
-  margin-bottom: 2px;
-  font-size: 0.7rem;
+  margin-bottom: 3px;
+  font-size: 0.6rem;
   font-weight: 800;
   letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
-
 
 .complaint-sla-risk-badge strong {
   display: block;
-  font-size: 1.65rem;
+  font-size: 1.45rem;
+  font-weight: 850;
   line-height: 1;
 }
 
-
 .complaint-sla-risk-badge.risk-low {
-  background: #f0fdf4;
-  border-color: #bbf7d0;
-  color: #166534;
+  background: #effaf4;
+  border-color: #ccebd8;
+  color: #18804b;
 }
-
 
 .complaint-sla-risk-badge.risk-medium {
-  background: #fffbeb;
-  border-color: #fde68a;
-  color: #92400e;
+  background: #fff9ed;
+  border-color: #f4dfad;
+  color: #a66300;
 }
-
 
 .complaint-sla-risk-badge.risk-high {
-  background: #fff7ed;
-  border-color: #fed7aa;
-  color: #c2410c;
+  background: #fff4eb;
+  border-color: #f3d0b5;
+  color: #bd571b;
 }
-
 
 .complaint-sla-risk-badge.risk-critical {
-  background: #fef2f2;
-  border-color: #fecaca;
-  color: #b91c1c;
+  background: #fff1f1;
+  border-color: #f1caca;
+  color: #b43a3a;
 }
-
 
 .complaint-sla-risk-summary {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.8fr);
-  gap: 18px;
-  margin-top: 24px;
+  grid-template-columns: minmax(0, 1.5fr) minmax(260px, 0.75fr);
+  gap: 14px;
+  margin-top: 20px;
 }
-
 
 .complaint-sla-risk-score,
 .complaint-sla-risk-action {
-  padding: 18px;
-  border-radius: 14px;
-  background: #f8fafc;
+  min-width: 0;
+  padding: 17px;
+  border: 1px solid #e8edf1;
+  border-radius: 12px;
+  background: #f9fbfc;
 }
-
 
 .complaint-sla-risk-score-track {
   width: 100%;
-  height: 9px;
+  height: 8px;
   overflow: hidden;
   border-radius: 999px;
-  background: #e2e8f0;
+  background: #e4eaee;
 }
-
 
 .complaint-sla-risk-score-fill {
   height: 100%;
   border-radius: inherit;
   background: currentColor;
+  transition: width 0.35s ease;
 }
-
 
 .risk-low .complaint-sla-risk-score-fill {
-  color: #16a34a;
+  color: #1b9a5c;
 }
-
 
 .risk-medium .complaint-sla-risk-score-fill {
-  color: #d97706;
+  color: #d58a16;
 }
-
 
 .risk-high .complaint-sla-risk-score-fill {
-  color: #ea580c;
+  color: #df6b25;
 }
-
 
 .risk-critical .complaint-sla-risk-score-fill {
-  color: #dc2626;
+  color: #d74747;
 }
-
 
 .complaint-sla-risk-score-label {
   display: flex;
@@ -154,354 +146,337 @@
   margin-top: 10px;
 }
 
-
 .complaint-sla-risk-score-label strong {
-  color: #0f172a;
-  font-size: 1rem;
+  color: #1b2a40;
+  font-size: 0.92rem;
+  font-weight: 800;
 }
-
 
 .complaint-sla-risk-score-label span {
-  color: #64748b;
-  font-size: 0.82rem;
+  color: #7c8998;
+  font-size: 0.72rem;
   text-align: right;
 }
-
 
 .complaint-sla-risk-action span {
   display: block;
   margin-bottom: 7px;
-  color: #64748b;
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  color: #7b8795;
+  font-size: 0.61rem;
+  font-weight: 850;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
 }
 
-
 .complaint-sla-risk-action strong {
   display: block;
-  color: #0f172a;
-  font-size: 0.9rem;
-  line-height: 1.5;
+  color: #26364b;
+  font-size: 0.79rem;
+  font-weight: 750;
+  line-height: 1.55;
 }
-
 
 .complaint-sla-progress-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
-  margin-top: 18px;
+  gap: 14px;
+  margin-top: 14px;
 }
-
 
 .complaint-sla-progress-card {
-  padding: 18px;
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
+  padding: 16px;
+  border: 1px solid #e7edf1;
+  border-radius: 12px;
   background: #ffffff;
 }
-
 
 .complaint-sla-progress-heading {
   display: flex;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 12px;
+  margin-bottom: 11px;
 }
-
 
 .complaint-sla-progress-heading > div span {
   display: block;
   margin-bottom: 3px;
-  color: #475569;
-  font-size: 0.82rem;
-  font-weight: 700;
+  color: #667589;
+  font-size: 0.72rem;
+  font-weight: 750;
 }
-
 
 .complaint-sla-progress-heading > div strong {
-  color: #0f172a;
-  font-size: 1.05rem;
-}
-
-
-.complaint-sla-progress-heading small {
-  align-self: center;
-  color: #64748b;
-  font-size: 0.75rem;
-  text-align: right;
-}
-
-
-.complaint-sla-progress-heading small.sla-breached {
-  color: #b91c1c;
+  color: #25364d;
+  font-size: 0.98rem;
   font-weight: 800;
 }
 
+.complaint-sla-progress-heading small {
+  align-self: center;
+  color: #84909e;
+  font-size: 0.67rem;
+  text-align: right;
+}
+
+.complaint-sla-progress-heading small.sla-breached {
+  color: #b43a3a;
+  font-weight: 800;
+}
 
 .complaint-sla-progress-track {
   width: 100%;
-  height: 8px;
+  height: 7px;
   overflow: hidden;
   border-radius: 999px;
-  background: #e2e8f0;
+  background: #e9eef2;
 }
-
 
 .complaint-sla-progress-fill {
   height: 100%;
   border-radius: inherit;
-  background: #64748b;
-  transition: width 0.3s ease;
+  background: #8996a4;
+  transition: width 0.35s ease;
 }
-
 
 .complaint-sla-progress-fill.normal {
-  background: #2563eb;
+  background: #3975b8;
 }
-
 
 .complaint-sla-progress-fill.warning {
-  background: #d97706;
+  background: #d38a1d;
 }
-
 
 .complaint-sla-progress-fill.breached {
-  background: #dc2626;
+  background: #d54b4b;
 }
-
 
 .complaint-sla-progress-card p {
-  margin: 10px 0 0;
-  color: #94a3b8;
-  font-size: 0.76rem;
+  margin: 9px 0 0;
+  color: #95a0ad;
+  font-size: 0.68rem;
   line-height: 1.45;
 }
-
 
 .complaint-sla-risk-metrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin-top: 18px;
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
+  margin-top: 14px;
   overflow: hidden;
+  border: 1px solid #e7edf1;
+  border-radius: 12px;
+  background: #ffffff;
 }
-
 
 .complaint-sla-risk-metrics > div {
-  padding: 17px;
-  border-right: 1px solid #e2e8f0;
+  min-width: 0;
+  padding: 15px 17px;
+  border-right: 1px solid #e7edf1;
 }
-
 
 .complaint-sla-risk-metrics > div:last-child {
   border-right: 0;
 }
-
 
 .complaint-sla-risk-metrics span,
 .complaint-sla-risk-metrics small {
   display: block;
 }
 
-
 .complaint-sla-risk-metrics span {
   margin-bottom: 5px;
-  color: #64748b;
-  font-size: 0.75rem;
-  font-weight: 700;
+  color: #7c8998;
+  font-size: 0.65rem;
+  font-weight: 750;
 }
-
 
 .complaint-sla-risk-metrics strong {
   display: block;
-  color: #0f172a;
-  font-size: 1.15rem;
+  overflow: hidden;
+  color: #26364b;
+  font-size: 1rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-
 
 .complaint-sla-risk-metrics small {
   margin-top: 3px;
-  color: #94a3b8;
-  font-size: 0.7rem;
+  color: #9aa5b1;
+  font-size: 0.63rem;
 }
-
 
 .complaint-sla-risk-factors {
-  margin-top: 18px;
-  padding: 18px;
-  border-radius: 14px;
-  background: #f8fafc;
+  margin-top: 14px;
+  padding: 17px;
+  border: 1px solid #e7edf1;
+  border-radius: 12px;
+  background: #f9fbfc;
 }
 
-
 .complaint-sla-risk-section-heading span {
-  color: #64748b;
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  color: #0f7f87;
+  font-size: 0.61rem;
+  font-weight: 850;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
-
 .complaint-sla-risk-section-heading h3 {
   margin: 4px 0 0;
-  color: #0f172a;
-  font-size: 1rem;
+  color: #26364b;
+  font-size: 0.9rem;
+  font-weight: 800;
 }
-
 
 .complaint-sla-risk-factors ul {
   display: grid;
-  gap: 9px;
-  margin: 14px 0 0;
+  gap: 8px;
+  margin: 13px 0 0;
   padding: 0;
   list-style: none;
 }
-
 
 .complaint-sla-risk-factors li {
   display: flex;
   align-items: flex-start;
   gap: 9px;
-  color: #334155;
-  font-size: 0.84rem;
-  line-height: 1.45;
+  color: #596a7d;
+  font-size: 0.72rem;
+  line-height: 1.5;
 }
-
 
 .complaint-sla-risk-factor-dot {
-  flex: 0 0 7px;
-  width: 7px;
-  height: 7px;
+  flex: 0 0 6px;
+  width: 6px;
+  height: 6px;
   margin-top: 6px;
   border-radius: 50%;
-  background: #64748b;
+  background: #0f7f87;
 }
-
 
 .complaint-sla-risk-no-factors {
-  margin: 12px 0 0;
-  color: #64748b;
-  font-size: 0.82rem;
+  margin: 11px 0 0;
+  color: #7f8b99;
+  font-size: 0.7rem;
 }
-
 
 .complaint-sla-risk-footer {
   display: grid;
   grid-template-columns: auto 1fr;
-  column-gap: 12px;
+  column-gap: 11px;
   row-gap: 4px;
-  margin-top: 18px;
-  padding-top: 18px;
-  border-top: 1px solid #e2e8f0;
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #e8edf1;
 }
-
 
 .complaint-sla-risk-footer > span {
-  color: #64748b;
-  font-size: 0.72rem;
-  font-weight: 800;
+  color: #7d8997;
+  font-size: 0.61rem;
+  font-weight: 850;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
 }
-
 
 .complaint-sla-risk-footer p {
   margin: 0;
-  color: #475569;
-  font-size: 0.78rem;
-  line-height: 1.45;
+  color: #596a7d;
+  font-size: 0.69rem;
+  line-height: 1.5;
 }
-
 
 .complaint-sla-risk-footer small {
   grid-column: 2;
-  color: #94a3b8;
-  font-size: 0.68rem;
+  color: #9aa5b1;
+  font-size: 0.62rem;
 }
-
 
 .complaint-sla-risk-loading {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 13px;
   min-height: 100px;
-  color: #475569;
+  color: #526274;
 }
 
-
 .complaint-sla-risk-spinner {
-  width: 22px;
-  height: 22px;
-  flex: 0 0 22px;
-  border: 3px solid #e2e8f0;
-  border-top-color: #475569;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  border: 2px solid #e1e8ed;
+  border-top-color: #0f7f87;
   border-radius: 50%;
   animation: complaint-sla-risk-spin 0.8s linear infinite;
 }
 
-
 .complaint-sla-risk-loading strong {
   display: block;
-  color: #0f172a;
-  font-size: 0.9rem;
+  color: #26364b;
+  font-size: 0.82rem;
+  font-weight: 800;
 }
-
 
 .complaint-sla-risk-loading p {
   margin: 4px 0 0;
-  color: #64748b;
-  font-size: 0.78rem;
+  color: #84909e;
+  font-size: 0.7rem;
 }
-
 
 .complaint-sla-risk-error {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  min-height: 90px;
-  padding: 16px;
-  border-radius: 12px;
-  background: #fef2f2;
+  min-height: 80px;
+  padding: 15px;
+  border: 1px solid #f0d1d1;
+  border-radius: 11px;
+  background: #fff7f7;
 }
-
 
 .complaint-sla-risk-error strong {
   display: block;
-  color: #991b1b;
-  font-size: 0.9rem;
+  color: #9f3939;
+  font-size: 0.82rem;
 }
-
 
 .complaint-sla-risk-error p {
   margin: 5px 0 0;
-  color: #b91c1c;
-  font-size: 0.78rem;
+  color: #b65353;
+  font-size: 0.7rem;
 }
-
 
 .complaint-sla-risk-retry {
   flex-shrink: 0;
-  padding: 9px 15px;
+  padding: 8px 14px;
   border: 0;
-  border-radius: 9px;
-  background: #991b1b;
+  border-radius: 8px;
+  background: #9f3939;
   color: #ffffff;
   font: inherit;
-  font-size: 0.78rem;
-  font-weight: 700;
+  font-size: 0.7rem;
+  font-weight: 750;
   cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease;
 }
-
 
 .complaint-sla-risk-retry:hover {
-  opacity: 0.9;
+  opacity: 0.92;
+  transform: translateY(-1px);
 }
 
+.complaint-sla-risk-retry:focus-visible {
+  outline: 3px solid rgba(159, 57, 57, 0.18);
+  outline-offset: 2px;
+}
+
+.complaint-sla-risk-retry:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none;
+}
 
 @keyframes complaint-sla-risk-spin {
   to {
@@ -509,56 +484,105 @@
   }
 }
 
+@media (max-width: 1050px) {
+  .complaint-sla-risk-summary {
+    grid-template-columns: minmax(0, 1.25fr) minmax(230px, 0.75fr);
+  }
+
+  .complaint-sla-risk-header {
+    gap: 18px;
+  }
+}
+
+@media (max-width: 900px) {
+  .complaint-sla-risk-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .complaint-sla-risk-action {
+    min-height: auto;
+  }
+}
 
 @media (max-width: 800px) {
   .complaint-sla-risk-card {
     padding: 20px;
   }
 
-
   .complaint-sla-risk-header {
     flex-direction: column;
   }
-
 
   .complaint-sla-risk-badge {
     align-self: flex-start;
   }
 
-
-  .complaint-sla-risk-summary {
-    grid-template-columns: 1fr;
-  }
-
-
   .complaint-sla-progress-grid {
     grid-template-columns: 1fr;
   }
-
 
   .complaint-sla-risk-metrics {
     grid-template-columns: 1fr;
   }
 
-
   .complaint-sla-risk-metrics > div {
     border-right: 0;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e7edf1;
   }
-
 
   .complaint-sla-risk-metrics > div:last-child {
     border-bottom: 0;
   }
 }
 
+@media (max-width: 600px) {
+  .complaint-sla-risk-header {
+    padding-bottom: 17px;
+  }
+
+  .complaint-sla-risk-description {
+    font-size: 0.74rem;
+  }
+
+  .complaint-sla-risk-summary {
+    gap: 10px;
+    margin-top: 16px;
+  }
+
+  .complaint-sla-risk-score,
+  .complaint-sla-risk-action,
+  .complaint-sla-progress-card,
+  .complaint-sla-risk-factors {
+    padding: 14px;
+  }
+
+  .complaint-sla-risk-metrics > div {
+    padding: 13px 14px;
+  }
+
+  .complaint-sla-risk-footer {
+    display: block;
+  }
+
+  .complaint-sla-risk-footer > span {
+    display: block;
+    margin-bottom: 5px;
+  }
+
+  .complaint-sla-risk-footer p {
+    margin-bottom: 4px;
+  }
+
+  .complaint-sla-risk-footer small {
+    display: block;
+  }
+}
 
 @media (max-width: 520px) {
   .complaint-sla-risk-card {
     padding: 16px;
-    border-radius: 14px;
+    border-radius: 13px;
   }
-
 
   .complaint-sla-risk-score-label {
     align-items: flex-start;
@@ -566,36 +590,45 @@
     gap: 3px;
   }
 
-
   .complaint-sla-risk-score-label span {
     text-align: left;
   }
-
 
   .complaint-sla-progress-heading {
     flex-direction: column;
     gap: 5px;
   }
 
-
   .complaint-sla-progress-heading small {
     align-self: flex-start;
     text-align: left;
   }
-
 
   .complaint-sla-risk-error {
     align-items: flex-start;
     flex-direction: column;
   }
 
+  .complaint-sla-risk-retry {
+    width: 100%;
+  }
 
   .complaint-sla-risk-footer {
     grid-template-columns: 1fr;
   }
 
-
   .complaint-sla-risk-footer small {
     grid-column: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .complaint-sla-risk-card *,
+  .complaint-sla-risk-card *::before,
+  .complaint-sla-risk-card *::after {
+    scroll-behavior: auto;
+    transition-duration: 0.01ms;
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
   }
 }
