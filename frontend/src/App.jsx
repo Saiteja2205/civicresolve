@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
+  Link,
   Navigate,
   Route,
   Routes,
+  useLocation,
   useNavigate,
 } from "react-router-dom";
 
@@ -10,28 +12,52 @@ import "./App.css";
 
 import { useAuth } from "./context/AuthContext.jsx";
 import DashboardLayout from "./layouts/DashboardLayout.jsx";
-
 import AdminDashboard from "./pages/AdminDashboard.jsx";
 import AnalyticsDashboard from "./pages/AnalyticsDashboard.jsx";
 import CitizenDashboard from "./pages/CitizenDashboard.jsx";
 import ComplaintCreatePage from "./pages/ComplaintCreatePage.jsx";
 import ComplaintDetailPage from "./pages/ComplaintDetailPage.jsx";
 import ComplaintListPage from "./pages/ComplaintListPage.jsx";
+import HomePage from "./pages/HomePage.jsx";
 import LoadingScreen from "./pages/LoadingScreen.jsx";
 import OfficerDashboard from "./pages/OfficerDashboard.jsx";
+import ProfilePage from "./pages/ProfilePage.jsx";
+import RegisterPage from "./pages/RegisterPage.jsx";
 import SLADashboard from "./pages/SLADashboard.jsx";
 import ActivityPage from "./pages/ActivityPage.jsx";
-import ProfilePage from "./pages/ProfilePage.jsx";
 
 function LoginPage() {
-  const { login } = useAuth();
+  const { login, isAuthenticated, isLoadingUser } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(
+    location.state?.email || "",
+  );
   const [password, setPassword] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    if (location.state?.registered) {
+      setError("");
+      window.history.replaceState(
+        {},
+        document.title,
+        window.location.pathname,
+      );
+    }
+  }, [location.state]);
+
+  if (isLoadingUser) {
+    return <LoadingScreen />;
+  }
+
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -63,11 +89,6 @@ function LoginPage() {
         });
       }
     } catch (loginError) {
-      console.error(
-        "Login failed:",
-        loginError,
-      );
-
       const detail =
         loginError?.response?.data?.detail;
 
@@ -81,94 +102,192 @@ function LoginPage() {
   }
 
   return (
-    <main className="login-page">
-      <section className="login-card">
-        <div className="login-brand">
-          <span className="login-brand-mark">
+    <main className="auth-page">
+      <section className="auth-showcase">
+        <Link
+          to="/"
+          className="auth-brand"
+        >
+          <span className="auth-brand-mark">
             CR
           </span>
 
-          <div>
-            <p className="login-brand-name">
-              CivicResolve
-            </p>
+          <span>
+            <strong>CivicResolve</strong>
+            <small>Intelligent grievance resolution</small>
+          </span>
+        </Link>
 
-            <p className="login-brand-tagline">
-              Intelligent grievance resolution
-            </p>
+        <div className="auth-showcase-content">
+          <span className="auth-kicker">
+            CIVIC SERVICE, REIMAGINED
+          </span>
+
+          <h1>
+            Your issue deserves
+            <span> visibility.</span>
+          </h1>
+
+          <p>
+            Sign in to report grievances, track progress, receive
+            updates and stay connected with the resolution journey.
+          </p>
+
+          <div className="auth-benefits">
+            <div>
+              <span className="benefit-icon">01</span>
+              <div>
+                <strong>Report</strong>
+                <p>
+                  Submit structured complaints with supporting
+                  information.
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <span className="benefit-icon">02</span>
+              <div>
+                <strong>Track</strong>
+                <p>
+                  See exactly where your complaint stands.
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <span className="benefit-icon">03</span>
+              <div>
+                <strong>Resolve</strong>
+                <p>
+                  Follow the complete path from submission to
+                  resolution.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="login-heading">
-          <p className="login-eyebrow">
-            SECURE ACCESS
-          </p>
-
-          <h1>Welcome back</h1>
-
-          <p>
-            Sign in to access your CivicResolve
-            workspace.
-          </p>
+        <div className="auth-showcase-footer">
+          <span>AI-assisted</span>
+          <span>Multilingual</span>
+          <span>Transparent</span>
+          <span>Citizen-first</span>
         </div>
+      </section>
 
-        <form
-          className="login-form"
-          onSubmit={handleSubmit}
-        >
-          <label htmlFor="email">
-            Email
-          </label>
+      <section className="auth-form-section">
+        <div className="auth-card">
+          <div className="auth-card-heading">
+            <span className="auth-kicker">
+              SECURE ACCESS
+            </span>
 
-          <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(event) =>
-              setEmail(event.target.value)
-            }
-            placeholder="you@example.com"
-            autoComplete="email"
-            required
-          />
+            <h2>Welcome back</h2>
 
-          <label htmlFor="password">
-            Password
-          </label>
-
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(event) =>
-              setPassword(event.target.value)
-            }
-            placeholder="Enter your password"
-            autoComplete="current-password"
-            required
-          />
-
-          {error && (
-            <p className="login-error">
-              {error}
+            <p>
+              Sign in to continue to your CivicResolve workspace.
             </p>
+          </div>
+
+          {location.state?.registered && (
+            <div className="auth-message auth-message-success">
+              <span>✓</span>
+              Account created successfully. You can sign in now.
+            </div>
           )}
 
-          <button
-            type="submit"
-            className="login-submit"
-            disabled={loading}
+          <form
+            className="auth-form"
+            onSubmit={handleSubmit}
           >
-            {loading
-              ? "Signing in..."
-              : "Sign in"}
-          </button>
-        </form>
+            <div className="auth-field">
+              <label htmlFor="email">
+                Email address
+              </label>
+
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(event) =>
+                  setEmail(event.target.value)
+                }
+                placeholder="you@example.com"
+                autoComplete="email"
+                required
+              />
+            </div>
+
+            <div className="auth-field">
+              <label htmlFor="password">
+                Password
+              </label>
+
+              <div className="auth-password">
+                <input
+                  id="password"
+                  type={
+                    showPassword
+                      ? "text"
+                      : "password"
+                  }
+                  value={password}
+                  onChange={(event) =>
+                    setPassword(event.target.value)
+                  }
+                  placeholder="Enter your password"
+                  autoComplete="current-password"
+                  required
+                />
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowPassword(
+                      (current) => !current,
+                    )
+                  }
+                >
+                  {showPassword ? "Hide" : "Show"}
+                </button>
+              </div>
+            </div>
+
+            {error && (
+              <div className="auth-message auth-message-error">
+                <span>!</span>
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              className="auth-submit"
+              disabled={loading}
+            >
+              {loading
+                ? "Signing in..."
+                : "Sign in"}
+            </button>
+          </form>
+
+          <div className="auth-switch">
+            Don't have an account?
+            <Link to="/register">
+              Create one
+            </Link>
+          </div>
+
+          <p className="auth-security">
+            Secure access for CivicResolve citizens and authorized
+            personnel.
+          </p>
+        </div>
       </section>
     </main>
   );
 }
-
 
 function ProtectedRoute({ children }) {
   const {
@@ -191,7 +310,6 @@ function ProtectedRoute({ children }) {
 
   return children;
 }
-
 
 function RoleRoute({
   allowedRoles,
@@ -226,7 +344,6 @@ function RoleRoute({
 
   return children;
 }
-
 
 function DashboardRedirect() {
   const { user } = useAuth();
@@ -266,13 +383,66 @@ function DashboardRedirect() {
   );
 }
 
+function PublicHomeRoute() {
+  const {
+    isAuthenticated,
+    isLoadingUser,
+  } = useAuth();
+
+  if (isLoadingUser) {
+    return <LoadingScreen />;
+  }
+
+  if (isAuthenticated) {
+    return (
+      <Navigate
+        to="/dashboard"
+        replace
+      />
+    );
+  }
+
+  return <HomePage />;
+}
+
+function PublicRegisterRoute() {
+  const {
+    isAuthenticated,
+    isLoadingUser,
+  } = useAuth();
+
+  if (isLoadingUser) {
+    return <LoadingScreen />;
+  }
+
+  if (isAuthenticated) {
+    return (
+      <Navigate
+        to="/dashboard"
+        replace
+      />
+    );
+  }
+
+  return <RegisterPage />;
+}
 
 function App() {
   return (
     <Routes>
       <Route
+        path="/"
+        element={<PublicHomeRoute />}
+      />
+
+      <Route
         path="/login"
         element={<LoginPage />}
+      />
+
+      <Route
+        path="/register"
+        element={<PublicRegisterRoute />}
       />
 
       <Route
@@ -342,6 +512,7 @@ function App() {
             </RoleRoute>
           }
         />
+
         <Route
           path="profile"
           element={
@@ -371,6 +542,7 @@ function App() {
             </RoleRoute>
           }
         />
+
         <Route
           path="complaints"
           element={
@@ -435,20 +607,10 @@ function App() {
       </Route>
 
       <Route
-        path="/"
-        element={
-          <Navigate
-            to="/dashboard"
-            replace
-          />
-        }
-      />
-
-      <Route
         path="*"
         element={
           <Navigate
-            to="/dashboard"
+            to="/"
             replace
           />
         }
@@ -456,6 +618,5 @@ function App() {
     </Routes>
   );
 }
-
 
 export default App;
