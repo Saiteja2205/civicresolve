@@ -8,7 +8,7 @@ import { getComplaints } from "../services/complaintService";
 
 import "../styles/complaints.css";
 import "../styles/complaint-filters.css";
-
+import "../styles/complaint-list.css";
 
 const STATUS_OPTIONS = [
   {
@@ -61,7 +61,6 @@ const STATUS_OPTIONS = [
   },
 ];
 
-
 const PRIORITY_OPTIONS = [
   {
     value: "",
@@ -85,7 +84,6 @@ const PRIORITY_OPTIONS = [
   },
 ];
 
-
 const SORT_OPTIONS = [
   {
     value: "newest",
@@ -101,14 +99,12 @@ const SORT_OPTIONS = [
   },
 ];
 
-
 const PRIORITY_RANK = {
   CRITICAL: 4,
   HIGH: 3,
   MEDIUM: 2,
   LOW: 1,
 };
-
 
 function getComplaintList(data) {
   if (Array.isArray(data)) {
@@ -122,14 +118,12 @@ function getComplaintList(data) {
   return [];
 }
 
-
 function getErrorMessage(requestError) {
   return (
     requestError?.response?.data?.detail ||
     "Unable to load complaints. Please try again."
   );
 }
-
 
 function ComplaintListPage() {
   const { user } = useAuth();
@@ -140,17 +134,12 @@ function ComplaintListPage() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [priorityFilter, setPriorityFilter] =
-    useState("");
-  const [departmentFilter, setDepartmentFilter] =
-    useState("");
-  const [sortOrder, setSortOrder] =
-    useState("newest");
-
+  const [priorityFilter, setPriorityFilter] = useState("");
+  const [departmentFilter, setDepartmentFilter] = useState("");
+  const [sortOrder, setSortOrder] = useState("newest");
 
   const isOfficer = user?.role === "OFFICER";
   const isAdmin = user?.role === "ADMIN";
-
 
   async function loadComplaints() {
     setIsLoading(true);
@@ -159,70 +148,44 @@ function ComplaintListPage() {
     try {
       const data = await getComplaints();
 
-      setComplaints(
-        getComplaintList(data),
-      );
+      setComplaints(getComplaintList(data));
     } catch (requestError) {
-      console.error(
-        "Failed to load complaints:",
-        requestError,
-      );
+      console.error("Failed to load complaints:", requestError);
 
-      setError(
-        getErrorMessage(requestError),
-      );
+      setError(getErrorMessage(requestError));
     } finally {
       setIsLoading(false);
     }
   }
 
-
   useEffect(() => {
     loadComplaints();
   }, []);
 
-
   const departments = useMemo(() => {
     const names = complaints
-      .map(
-        (complaint) =>
-          complaint.department_name,
-      )
+      .map((complaint) => complaint.department_name)
       .filter(Boolean);
 
-    return [...new Set(names)].sort(
-      (a, b) =>
-        a.localeCompare(b),
-    );
+    return [...new Set(names)].sort((a, b) => a.localeCompare(b));
   }, [complaints]);
-
 
   const stats = useMemo(() => {
     const total = complaints.length;
 
     const active = complaints.filter(
       (complaint) =>
-        ![
-          "RESOLVED",
-          "CLOSED",
-          "REJECTED",
-        ].includes(complaint.status),
+        !["RESOLVED", "CLOSED", "REJECTED"].includes(
+          complaint.status,
+        ),
     ).length;
 
-    const resolved = complaints.filter(
-      (complaint) =>
-        [
-          "RESOLVED",
-          "CLOSED",
-        ].includes(complaint.status),
+    const resolved = complaints.filter((complaint) =>
+      ["RESOLVED", "CLOSED"].includes(complaint.status),
     ).length;
 
-    const urgent = complaints.filter(
-      (complaint) =>
-        [
-          "HIGH",
-          "CRITICAL",
-        ].includes(complaint.priority),
+    const urgent = complaints.filter((complaint) =>
+      ["HIGH", "CRITICAL"].includes(complaint.priority),
     ).length;
 
     return {
@@ -233,90 +196,73 @@ function ComplaintListPage() {
     };
   }, [complaints]);
 
-
   const filteredComplaints = useMemo(() => {
-    const normalizedSearch =
-      searchTerm.trim().toLowerCase();
+    const normalizedSearch = searchTerm.trim().toLowerCase();
 
-    const filtered = complaints.filter(
-      (complaint) => {
-        const searchableText = [
-          complaint.ticket_number,
-          complaint.title,
-          complaint.description,
-          complaint.department_name,
-          complaint.category_name,
-        ]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
+    const filtered = complaints.filter((complaint) => {
+      const searchableText = [
+        complaint.ticket_number,
+        complaint.title,
+        complaint.description,
+        complaint.department_name,
+        complaint.category_name,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
 
-        const matchesSearch =
-          !normalizedSearch ||
-          searchableText.includes(
-            normalizedSearch,
-          );
+      const matchesSearch =
+        !normalizedSearch ||
+        searchableText.includes(normalizedSearch);
 
-        const matchesStatus =
-          !statusFilter ||
-          complaint.status === statusFilter;
+      const matchesStatus =
+        !statusFilter ||
+        complaint.status === statusFilter;
 
-        const matchesPriority =
-          !priorityFilter ||
-          complaint.priority ===
-            priorityFilter;
+      const matchesPriority =
+        !priorityFilter ||
+        complaint.priority === priorityFilter;
 
-        const matchesDepartment =
-          !departmentFilter ||
-          complaint.department_name ===
-            departmentFilter;
+      const matchesDepartment =
+        !departmentFilter ||
+        complaint.department_name === departmentFilter;
 
+      return (
+        matchesSearch &&
+        matchesStatus &&
+        matchesPriority &&
+        matchesDepartment
+      );
+    });
+
+    return [...filtered].sort((a, b) => {
+      if (sortOrder === "oldest") {
         return (
-          matchesSearch &&
-          matchesStatus &&
-          matchesPriority &&
-          matchesDepartment
+          new Date(a.created_at) -
+          new Date(b.created_at)
         );
-      },
-    );
+      }
 
+      if (sortOrder === "priority") {
+        const priorityDifference =
+          (PRIORITY_RANK[b.priority] || 0) -
+          (PRIORITY_RANK[a.priority] || 0);
 
-    return [...filtered].sort(
-      (a, b) => {
-        if (sortOrder === "oldest") {
-          return (
-            new Date(a.created_at) -
-            new Date(b.created_at)
-          );
-        }
-
-        if (sortOrder === "priority") {
-          const priorityDifference =
-            (PRIORITY_RANK[
-              b.priority
-            ] || 0) -
-            (PRIORITY_RANK[
-              a.priority
-            ] || 0);
-
-          if (
-            priorityDifference !== 0
-          ) {
-            return priorityDifference;
-          }
-
-          return (
-            new Date(b.created_at) -
-            new Date(a.created_at)
-          );
+        if (priorityDifference !== 0) {
+          return priorityDifference;
         }
 
         return (
           new Date(b.created_at) -
           new Date(a.created_at)
         );
-      },
-    );
+      }
+
+      return (
+        new Date(b.created_at) -
+        new Date(a.created_at)
+      );
+    });
   }, [
     complaints,
     searchTerm,
@@ -326,14 +272,12 @@ function ComplaintListPage() {
     sortOrder,
   ]);
 
-
   const hasActiveFilters =
     searchTerm.trim() !== "" ||
     statusFilter !== "" ||
     priorityFilter !== "" ||
     departmentFilter !== "" ||
     sortOrder !== "newest";
-
 
   function clearFilters() {
     setSearchTerm("");
@@ -343,13 +287,11 @@ function ComplaintListPage() {
     setSortOrder("newest");
   }
 
-
   const pageTitle = isAdmin
     ? "All complaints"
     : isOfficer
       ? "Assigned complaints"
       : "My complaints";
-
 
   const pageDescription = isAdmin
     ? "Monitor grievances across the entire CivicResolve system."
@@ -357,16 +299,13 @@ function ComplaintListPage() {
       ? "Review complaints currently assigned to you."
       : "Track every grievance you have submitted.";
 
-
   const detailBasePath = isOfficer
     ? "/dashboard/assigned"
     : "/dashboard/complaints";
 
-
   if (isLoading) {
     return (
       <section className="complaints-page">
-
         <div className="complaints-page-header">
           <div>
             <p className="dashboard-eyebrow">
@@ -378,25 +317,19 @@ function ComplaintListPage() {
             <p>{pageDescription}</p>
           </div>
         </div>
-
 
         <div className="complaints-loading">
           <div className="complaints-spinner" />
 
-          <p>
-            Loading complaints...
-          </p>
+          <p>Loading complaints...</p>
         </div>
-
       </section>
     );
   }
 
-
   if (error) {
     return (
       <section className="complaints-page">
-
         <div className="complaints-page-header">
           <div>
             <p className="dashboard-eyebrow">
@@ -409,12 +342,8 @@ function ComplaintListPage() {
           </div>
         </div>
 
-
         <div className="complaints-error">
-
-          <strong>
-            Unable to load complaints
-          </strong>
+          <strong>Unable to load complaints</strong>
 
           <p>{error}</p>
 
@@ -424,19 +353,14 @@ function ComplaintListPage() {
           >
             Try again
           </button>
-
         </div>
-
       </section>
     );
   }
 
-
   return (
     <section className="complaints-page">
-
       <div className="complaints-page-header">
-
         <div>
           <p className="dashboard-eyebrow">
             COMPLAINT TRACKING
@@ -447,96 +371,68 @@ function ComplaintListPage() {
           <p>{pageDescription}</p>
         </div>
 
-
         <button
           type="button"
           className="complaints-refresh-button"
           onClick={loadComplaints}
           disabled={isLoading}
         >
-          {isLoading
-            ? "Refreshing..."
-            : "Refresh"}
-        </button>
+          <span className="complaints-refresh-icon">
+            ↻
+          </span>
 
+          {isLoading ? "Refreshing..." : "Refresh"}
+        </button>
       </div>
 
-
       <div className="complaint-stats-grid">
-
         <div className="complaint-stat-card">
           <span>Total</span>
 
-          <strong>
-            {stats.total}
-          </strong>
+          <strong>{stats.total}</strong>
 
-          <small>
-            Complaints visible to you
-          </small>
+          <small>Complaints visible to you</small>
         </div>
-
 
         <div className="complaint-stat-card">
           <span>Active</span>
 
-          <strong>
-            {stats.active}
-          </strong>
+          <strong>{stats.active}</strong>
 
-          <small>
-            Still being processed
-          </small>
+          <small>Still being processed</small>
         </div>
-
 
         <div className="complaint-stat-card">
           <span>Resolved</span>
 
-          <strong>
-            {stats.resolved}
-          </strong>
+          <strong>{stats.resolved}</strong>
 
-          <small>
-            Resolved or closed
-          </small>
+          <small>Resolved or closed</small>
         </div>
-
 
         <div className="complaint-stat-card">
           <span>High priority</span>
 
-          <strong>
-            {stats.urgent}
-          </strong>
+          <strong>{stats.urgent}</strong>
 
-          <small>
-            High or critical priority
-          </small>
+          <small>High or critical priority</small>
         </div>
-
       </div>
 
-
       <section className="complaint-filter-card">
-
         <div className="complaint-filter-header">
-
           <div>
             <p className="complaint-filter-eyebrow">
               FIND A COMPLAINT
             </p>
 
-            <h2>
-              Search and filter
-            </h2>
+            <h2>Search and filter</h2>
 
             <p>
-              Narrow down the complaint records
-              visible to you.
+              Narrow down the complaint records visible
+              to you.
             </p>
           </div>
-
 
           {hasActiveFilters && (
             <button
@@ -547,14 +443,10 @@ function ComplaintListPage() {
               Clear filters
             </button>
           )}
-
         </div>
 
-
         <div className="complaint-filter-grid">
-
           <div className="complaint-filter-field complaint-filter-search">
-
             <label htmlFor="complaint-search">
               Search
             </label>
@@ -564,18 +456,13 @@ function ComplaintListPage() {
               type="search"
               value={searchTerm}
               onChange={(event) =>
-                setSearchTerm(
-                  event.target.value,
-                )
+                setSearchTerm(event.target.value)
               }
               placeholder="Ticket, title, description, department..."
             />
-
           </div>
 
-
           <div className="complaint-filter-field">
-
             <label htmlFor="complaint-status">
               Status
             </label>
@@ -584,28 +471,21 @@ function ComplaintListPage() {
               id="complaint-status"
               value={statusFilter}
               onChange={(event) =>
-                setStatusFilter(
-                  event.target.value,
-                )
+                setStatusFilter(event.target.value)
               }
             >
-              {STATUS_OPTIONS.map(
-                (option) => (
-                  <option
-                    key={option.value}
-                    value={option.value}
-                  >
-                    {option.label}
-                  </option>
-                ),
-              )}
+              {STATUS_OPTIONS.map((option) => (
+                <option
+                  key={option.value}
+                  value={option.value}
+                >
+                  {option.label}
+                </option>
+              ))}
             </select>
-
           </div>
 
-
           <div className="complaint-filter-field">
-
             <label htmlFor="complaint-priority">
               Priority
             </label>
@@ -614,28 +494,21 @@ function ComplaintListPage() {
               id="complaint-priority"
               value={priorityFilter}
               onChange={(event) =>
-                setPriorityFilter(
-                  event.target.value,
-                )
+                setPriorityFilter(event.target.value)
               }
             >
-              {PRIORITY_OPTIONS.map(
-                (option) => (
-                  <option
-                    key={option.value}
-                    value={option.value}
-                  >
-                    {option.label}
-                  </option>
-                ),
-              )}
+              {PRIORITY_OPTIONS.map((option) => (
+                <option
+                  key={option.value}
+                  value={option.value}
+                >
+                  {option.label}
+                </option>
+              ))}
             </select>
-
           </div>
 
-
           <div className="complaint-filter-field">
-
             <label htmlFor="complaint-department">
               Department
             </label>
@@ -644,32 +517,23 @@ function ComplaintListPage() {
               id="complaint-department"
               value={departmentFilter}
               onChange={(event) =>
-                setDepartmentFilter(
-                  event.target.value,
-                )
+                setDepartmentFilter(event.target.value)
               }
             >
-              <option value="">
-                All departments
-              </option>
+              <option value="">All departments</option>
 
-              {departments.map(
-                (department) => (
-                  <option
-                    key={department}
-                    value={department}
-                  >
-                    {department}
-                  </option>
-                ),
-              )}
+              {departments.map((department) => (
+                <option
+                  key={department}
+                  value={department}
+                >
+                  {department}
+                </option>
+              ))}
             </select>
-
           </div>
 
-
           <div className="complaint-filter-field">
-
             <label htmlFor="complaint-sort">
               Sort
             </label>
@@ -678,40 +542,29 @@ function ComplaintListPage() {
               id="complaint-sort"
               value={sortOrder}
               onChange={(event) =>
-                setSortOrder(
-                  event.target.value,
-                )
+                setSortOrder(event.target.value)
               }
             >
-              {SORT_OPTIONS.map(
-                (option) => (
-                  <option
-                    key={option.value}
-                    value={option.value}
-                  >
-                    {option.label}
-                  </option>
-                ),
-              )}
+              {SORT_OPTIONS.map((option) => (
+                <option
+                  key={option.value}
+                  value={option.value}
+                >
+                  {option.label}
+                </option>
+              ))}
             </select>
-
           </div>
-
         </div>
-
       </section>
-
 
       {complaints.length === 0 ? (
         <div className="complaints-empty">
-
           <div className="complaints-empty-icon">
-            C
+            +
           </div>
 
-          <h2>
-            No complaints yet
-          </h2>
+          <h2>No complaints yet</h2>
 
           <p>
             {isOfficer
@@ -721,45 +574,57 @@ function ComplaintListPage() {
                 : "You have not submitted any complaints yet."}
           </p>
 
+          {!isOfficer && !isAdmin && (
+            <Link
+              to="/dashboard/complaints/new"
+              className="complaint-empty-action"
+            >
+              Report your first issue
+              <span>→</span>
+            </Link>
+          )}
         </div>
       ) : (
-        <div className="complaints-table-card">
-
-          <div className="complaints-table-header">
-
+        <section className="complaint-records-card">
+          <div className="complaint-records-header">
             <div>
-              <h2>
-                Complaint records
-              </h2>
+              <p className="complaint-records-eyebrow">
+                YOUR CASES
+              </p>
+
+              <h2>Complaint records</h2>
+
+              <p>
+                Follow the latest updates across your
+                grievances.
+              </p>
+            </div>
+
+            <div className="complaint-record-count">
+              <strong>
+                {filteredComplaints.length}
+              </strong>
 
               <span>
-                Showing{" "}
-                {filteredComplaints.length}{" "}
-                of{" "}
-                {complaints.length}{" "}
+                of {complaints.length}{" "}
                 {complaints.length === 1
                   ? "complaint"
                   : "complaints"}
               </span>
             </div>
-
           </div>
-
 
           {filteredComplaints.length === 0 ? (
             <div className="complaint-filter-empty">
-
               <div className="complaint-filter-empty-icon">
                 ?
               </div>
 
-              <h3>
-                No matching complaints
-              </h3>
+              <h3>No matching complaints</h3>
 
               <p>
-                Try changing your search or
-                filter criteria.
+                Try changing your search or filter
+                criteria.
               </p>
 
               <button
@@ -768,143 +633,102 @@ function ComplaintListPage() {
               >
                 Clear filters
               </button>
-
             </div>
           ) : (
-            <div className="complaints-table-wrapper">
+            <div className="complaint-record-list">
+              {filteredComplaints.map((complaint) => (
+                <article
+                  key={complaint.id}
+                  className="complaint-record"
+                >
+                  <div className="complaint-record-main">
+                    <div className="complaint-record-top">
+                      <div className="complaint-record-ticket">
+                        <span>CASE</span>
 
-              <table className="complaints-table">
+                        <strong>
+                          {complaint.ticket_number}
+                        </strong>
+                      </div>
 
-                <thead>
-                  <tr>
-                    <th>Ticket</th>
-                    <th>Complaint</th>
-                    <th>Department</th>
-                    <th>Priority</th>
-                    <th>Status</th>
-                    <th>Submitted</th>
-                    <th />
-                  </tr>
-                </thead>
+                      <ComplaintStatusBadge
+                        status={complaint.status}
+                      />
+                    </div>
 
+                    <Link
+                      to={`${detailBasePath}/${complaint.id}`}
+                      className="complaint-record-title"
+                    >
+                      {complaint.title}
+                    </Link>
 
-                <tbody>
+                    <p className="complaint-record-description">
+                      {truncateText(
+                        complaint.description,
+                        150,
+                      )}
+                    </p>
 
-                  {filteredComplaints.map(
-                    (complaint) => (
-                      <tr
-                        key={
-                          complaint.id
-                        }
-                      >
+                    <div className="complaint-record-meta">
+                      <span>
+                        <strong>Department</strong>
+                        {complaint.department_name ||
+                          "Not assigned"}
+                      </span>
 
-                        <td>
-                          <strong className="complaint-ticket">
-                            {
-                              complaint.ticket_number
-                            }
-                          </strong>
-                        </td>
+                      <span>
+                        <strong>Category</strong>
+                        {complaint.category_name ||
+                          "General"}
+                      </span>
 
+                      <span>
+                        <strong>Submitted</strong>
+                        {formatDate(
+                          complaint.created_at,
+                        )}
+                      </span>
 
-                        <td>
-                          <div className="complaint-title-cell">
+                      {complaint.updated_at && (
+                        <span>
+                          <strong>Updated</strong>
+                          {formatDate(
+                            complaint.updated_at,
+                          )}
+                        </span>
+                      )}
+                    </div>
+                  </div>
 
-                            <strong>
-                              {
-                                complaint.title
-                              }
-                            </strong>
+                  <div className="complaint-record-side">
+                    <div className="complaint-record-priority">
+                      <span>Priority</span>
 
-                            <span>
-                              {truncateText(
-                                complaint.description,
-                                80,
-                              )}
-                            </span>
+                      <ComplaintPriorityBadge
+                        priority={complaint.priority}
+                      />
+                    </div>
 
-                          </div>
-                        </td>
-
-
-                        <td>
-
-                          <span className="complaint-department">
-                            {
-                              complaint.department_name ||
-                              "—"
-                            }
-                          </span>
-
-                          <small>
-                            {
-                              complaint.category_name ||
-                              "—"
-                            }
-                          </small>
-
-                        </td>
-
-
-                        <td>
-                          <ComplaintPriorityBadge
-                            priority={
-                              complaint.priority
-                            }
-                          />
-                        </td>
-
-
-                        <td>
-                          <ComplaintStatusBadge
-                            status={
-                              complaint.status
-                            }
-                          />
-                        </td>
-
-
-                        <td>
-                          <span className="complaint-date">
-                            {formatDate(
-                              complaint.created_at,
-                            )}
-                          </span>
-                        </td>
-
-
-                        <td>
-                          <Link
-                            to={`${detailBasePath}/${complaint.id}`}
-                            className="complaint-view-link"
-                          >
-                            View
-                          </Link>
-                        </td>
-
-                      </tr>
-                    ),
-                  )}
-
-                </tbody>
-
-              </table>
-
+                    <Link
+                      to={`${detailBasePath}/${complaint.id}`}
+                      className="complaint-record-action"
+                    >
+                      <span>View complaint</span>
+                      <span>→</span>
+                    </Link>
+                  </div>
+                </article>
+              ))}
             </div>
           )}
-
-        </div>
+        </section>
       )}
-
     </section>
   );
 }
 
-
-function truncateText(
-  text,
-  maxLength,
-) {
+function truncateText(text, maxLength) {
   if (!text) {
     return "";
   }
@@ -913,12 +737,8 @@ function truncateText(
     return text;
   }
 
-  return `${text.slice(
-    0,
-    maxLength,
-  )}...`;
+  return `${text.slice(0, maxLength)}...`;
 }
-
 
 function formatDate(value) {
   if (!value) {
@@ -931,15 +751,11 @@ function formatDate(value) {
     return "—";
   }
 
-  return date.toLocaleDateString(
-    "en-IN",
-    {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    },
-  );
+  return date.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 }
-
 
 export default ComplaintListPage;

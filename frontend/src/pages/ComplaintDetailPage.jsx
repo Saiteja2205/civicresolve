@@ -32,7 +32,7 @@ import "../styles/admin-assignment.css";
 import "../styles/citizen-resolution.css";
 import "../styles/complaint-sla-risk.css";
 import "../styles/ai-resolution-assistant.css";
-
+import "../styles/complaint-detail.css";
 
 function getBackPath(role) {
   if (role === "OFFICER") {
